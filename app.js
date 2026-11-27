@@ -2,11 +2,22 @@
   "use strict";
 
   const S = window.Signature, $ = (id) => document.getElementById(id);
-  const KEY = "gmail-signature-builder.v2";
+  const KEY = "gmail-signature-builder.v3";
   const PRESETS = ["#5b3fd6", "#c2185b", "#0a6aa1", "#087a45", "#a35400", "#374151"];
+  // Version 2 opened with "Alex Rivera" and colour icons. Someone who made it their own keeps
+  // their details; an untouched example is dropped, so the new example and defaults show.
+  try {
+    const old = localStorage.getItem("gmail-signature-builder.v2");
+    if (old && !localStorage.getItem(KEY)) {
+      const v2 = JSON.parse(old);
+      if (v2 && Array.isArray(v2.items) && v2.name !== "Alex Rivera") localStorage.setItem(KEY, old);
+    }
+    localStorage.removeItem("gmail-signature-builder.v2");
+  } catch (e) { /* storage refused: start from the example */ }
   const st = S.load(KEY);
   const failed = new Set(); // photo links that didn't load here
-  const page = $("page"), sig = $("sig"), pop = $("pop"), bar = $("hoverbar"), sheet = $("sheet");
+  const page = $("page"), sig = $("sig"), pop = $("pop"), bar = $("hoverbar"), sheet = $("sheet"), grip = $("grip");
+  const stage = document.querySelector(".stage");
   let mode = "edit", which = "full";
   let barFor = null; // the line or link the hover bar is showing for
 
@@ -41,7 +52,11 @@
   }
   // The poster shows the signature larger than it will be in an email. Rather than CSS zoom,
   // which browsers size tables wrongly under, the edit view's pixel sizes are scaled directly.
-  const scaleFor = () => (window.innerWidth > 960 ? 1.5 : window.innerWidth > 600 ? 1.25 : 1);
+  const scaleFor = () => {
+    const w = window.innerWidth;
+    if (!sheet.hidden && w > 600) return 1.25; // the Layout panel shares the width
+    return w > 960 ? 1.5 : w > 600 ? 1.25 : 1;
+  };
   let scale = scaleFor();
   function scaled(html, k) {
     if (k === 1) return html;
@@ -52,8 +67,16 @@
   }
   function renderSig() {
     bar.hidden = true;
+    grip.hidden = true;
     barFor = null;
-    sig.innerHTML = scaled(S.render(st, "edit", "full", env), scale);
+    const html = S.render(st, "edit", "full", env);
+    sig.innerHTML = scaled(html, scale);
+    // A wide layout that doesn't fit at this size is shown smaller, never below real size,
+    // so the whole signature stays in view.
+    if (scale > 1 && sig.scrollWidth > sig.clientWidth + 1) {
+      const k = Math.max(1, Math.floor((scale * sig.clientWidth / sig.scrollWidth) * 20) / 20);
+      sig.innerHTML = scaled(html, k);
+    }
     watchPhotos(sig);
   }
   function renderAll() {
@@ -136,18 +159,18 @@
     if (p) openPhoto(p);
   });
 
-  // ---------- hover bar: drag, move, remove ----------
-  let hideTimer = null;
+  // ---------- hovering a line: move or remove it, and a handle to drag it ----------
+  let hideTimer = null, dragId = null;
   const target = (el) => (el && el.closest ? el.closest("[data-item], [data-opt]") : null);
   function showBar(el) {
-    if (!el || mode !== "edit") return;
+    if (!el || mode !== "edit" || dragId) return;
     if (!pop.hidden && pop.dataset.for === (el.dataset.item || el.dataset.opt)) return;
     clearTimeout(hideTimer);
     sig.querySelectorAll(".hl").forEach((x) => x.classList.remove("hl"));
     el.classList.add("hl");
     barFor = el;
     const isItem = !!el.dataset.item, vertical = el.tagName === "TR";
-    $("hbGrip").hidden = $("hbPrev").hidden = $("hbNext").hidden = !isItem;
+    $("hbPrev").hidden = $("hbNext").hidden = !isItem;
     $("hbPrev").innerHTML = vertical ? ARROW.up : ARROW.left;
     $("hbNext").innerHTML = vertical ? ARROW.down : ARROW.right;
     $("hbPrev").setAttribute("aria-label", vertical ? "Move up" : "Move left");
@@ -162,17 +185,31 @@
     const pr = page.getBoundingClientRect(), r = el.getBoundingClientRect();
     bar.style.left = Math.max(8, Math.min(r.left - pr.left, pr.width - bar.offsetWidth - 8)) + "px";
     bar.style.top = (r.top - pr.top - bar.offsetHeight - 6) + "px";
+    // Contact lines get a handle beside them; links are dragged by the link itself.
+    grip.hidden = !(isItem && el.dataset.group === "contact");
+    if (!grip.hidden) {
+      grip.style.left = Math.max(4, r.left - pr.left - grip.offsetWidth - 4) + "px";
+      grip.style.top = (r.top - pr.top + r.height / 2 - grip.offsetHeight / 2) + "px";
+    }
   }
   function hideBar(now) {
     clearTimeout(hideTimer);
-    const go = () => { bar.hidden = true; barFor = null; sig.querySelectorAll(".hl").forEach((x) => x.classList.remove("hl")); };
+    const go = () => {
+      if (dragId) return;
+      bar.hidden = true;
+      grip.hidden = true;
+      barFor = null;
+      sig.querySelectorAll(".hl").forEach((x) => x.classList.remove("hl"));
+    };
     if (now) go(); else hideTimer = setTimeout(go, 350);
   }
   sig.addEventListener("mouseover", (e) => { const t = target(e.target); if (t) showBar(t); });
   sig.addEventListener("mouseleave", () => hideBar());
   sig.addEventListener("focusin", (e) => { const t = target(e.target); if (t) showBar(t); });
-  bar.addEventListener("mouseenter", () => clearTimeout(hideTimer));
-  bar.addEventListener("mouseleave", () => hideBar());
+  [bar, grip].forEach((x) => {
+    x.addEventListener("mouseenter", () => clearTimeout(hideTimer));
+    x.addEventListener("mouseleave", () => hideBar());
+  });
 
   function swap(i, other) {
     const a = st.items.indexOf(i), b = st.items.indexOf(other);
@@ -196,23 +233,42 @@
     save(); hideBar(true); renderAll();
   });
 
-  // Drag from the grip onto another line or link of the same kind.
-  let dragId = null;
-  $("hbGrip").addEventListener("dragstart", (e) => {
-    if (!barFor || !barFor.dataset.item) { e.preventDefault(); return; }
-    dragId = barFor.dataset.item;
+  // Dragging: a contact line by the handle beside it, a link by the link itself, onto
+  // another line or link of the same kind. The dragged element is only dimmed, never
+  // hidden, because hiding it cancels the drag in some browsers.
+  function startDrag(e, el) {
+    dragId = el.dataset.item;
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", dragId);
-    try { e.dataTransfer.setDragImage(barFor, 12, 12); } catch (err) { /* not supported */ }
-    setTimeout(() => { bar.hidden = true; }, 0);
-  });
+    try { e.dataTransfer.setDragImage(el, 10, 10); } catch (err) { /* the browser's own image will do */ }
+    el.classList.add("dragging");
+    grip.classList.add("active");
+    bar.hidden = true;
+  }
   const clearDrop = () => sig.querySelectorAll(".drop-before, .drop-after").forEach((x) => x.classList.remove("drop-before", "drop-after"));
+  function endDrag() {
+    dragId = null;
+    clearDrop();
+    sig.querySelectorAll(".dragging").forEach((x) => x.classList.remove("dragging"));
+    grip.classList.remove("active");
+    hideBar(true);
+  }
+  grip.addEventListener("dragstart", (e) => {
+    if (!barFor || !barFor.dataset.item) { e.preventDefault(); return; }
+    startDrag(e, barFor);
+  });
+  sig.addEventListener("dragstart", (e) => {
+    const l = e.target.closest ? e.target.closest(".lnk[data-item]") : null;
+    if (l) startDrag(e, l);
+    else e.preventDefault(); // no dragging text or pictures out of the signature
+  });
   sig.addEventListener("dragover", (e) => {
     if (!dragId) return;
     const t = e.target.closest("[data-item]");
     clearDrop();
     if (!t || t.dataset.item === dragId || t.dataset.group !== groupOf(item(dragId))) return;
     e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
     const r = t.getBoundingClientRect();
     const before = t.tagName === "TR" ? e.clientY < r.top + r.height / 2 : e.clientX < r.left + r.width / 2;
     t.classList.add(before ? "drop-before" : "drop-after");
@@ -225,10 +281,10 @@
     st.items = st.items.filter((i) => i !== moving);
     const at = st.items.findIndex((i) => i.id === t.dataset.item);
     st.items.splice(before ? at : at + 1, 0, moving);
-    dragId = null;
+    endDrag();
     save(); renderAll();
   });
-  document.addEventListener("dragend", () => { dragId = null; clearDrop(); });
+  document.addEventListener("dragend", endDrag);
 
   // ---------- pop-ups ----------
   // Opens under the anchor, or above it when asked and there's room on screen.
@@ -250,17 +306,16 @@
   }
   document.addEventListener("mousedown", (e) => {
     if (!pop.hidden && !pop.contains(e.target) && !e.target.closest(".lnk, .photo-btn, #addBtn")) closePop();
-    if (!sheet.hidden && !$("dockWrap").contains(e.target)) toggleSheet(false);
   });
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (!pop.hidden) closePop();
-    if (!sheet.hidden) toggleSheet(false);
+    if (!sheet.hidden && sheet.contains(document.activeElement)) { toggleSheet(false); $("layoutBtn").focus(); }
   });
   window.addEventListener("resize", () => {
     if (!pop.hidden) closePop();
     hideBar(true);
-    if (scaleFor() !== scale && !sig.contains(document.activeElement)) { scale = scaleFor(); renderSig(); }
+    if (!sig.contains(document.activeElement)) { scale = scaleFor(); renderSig(); }
   });
 
   function openLink(id, anchor) {
@@ -372,7 +427,11 @@
   function buildSheet() {
     const ic = (set, t) => '<img src="' + S.iconPath(set, t) + '" alt="">';
     const names = { tagline: "Tagline", contact: "Contact", links: "Links" };
-    sheet.innerHTML = "<h3>Layout</h3>" +
+    // Rebuilding would lose the panel's scroll position and the focused button, so keep both.
+    const scrollTop = sheet.scrollTop, f = sheet.contains(document.activeElement) ? document.activeElement : null;
+    const refocus = f && (f.dataset.set ? '[data-set="' + f.dataset.set + '"][data-val="' + f.dataset.val + '"]'
+      : f.dataset.ord != null ? '[data-ord="' + f.dataset.ord + '"][data-dir="' + f.dataset.dir + '"]' : f.id ? "#" + f.id : null);
+    sheet.innerHTML = '<div class="sheet-head"><h3>Layout</h3><button type="button" class="done" id="sheetDone">Done</button></div>' +
       '<div class="tiles" role="radiogroup" aria-label="Layout">' + [["side", "Side by side"], ["stacked", "Stacked"], ["columns", "Two columns"], ["compact", "Compact"]].map(([v, l]) =>
         '<button type="button" class="tile" role="radio" data-set="layout" data-val="' + v + '" aria-checked="' + (st.layout === v) + '">' + SCHEMA[v] + l + "</button>").join("") + "</div>" +
       '<div class="opts-grid">' +
@@ -402,12 +461,25 @@
       st.blocks[k + d] = x;
       save(); renderAll();
     }));
+    $("sheetDone").addEventListener("click", () => { toggleSheet(false); $("layoutBtn").focus(); });
+    sheet.scrollTop = scrollTop;
+    if (refocus) {
+      const n = sheet.querySelector(refocus);
+      if (n && !n.disabled) n.focus({ preventScroll: true });
+    }
   }
+  // The panel opens beside the signature (under it on narrower screens, with the signature
+  // pinned at the top), so each change shows on the signature as it's made.
   function toggleSheet(open) {
     sheet.hidden = !open;
+    stage.classList.toggle("panel-open", open);
     $("layoutBtn").setAttribute("aria-expanded", open);
-    if (open) hideBar(true);
-    if (open) { closePop(); buildSheet(); }
+    if (open) { closePop(); hideBar(true); buildSheet(); }
+    if (scaleFor() !== scale) { scale = scaleFor(); renderSig(); }
+    if (open) {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      stage.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    }
   }
   $("layoutBtn").addEventListener("click", () => toggleSheet(sheet.hidden));
 
@@ -430,7 +502,7 @@
   async function doCopy(variant) {
     tidy();
     const ok = await S.copy(st, variant), ex = S.examplesInUse(st), status = $("status");
-    const what = variant === "reply" ? "Reply version copied" : "Signature copied";
+    const what = variant === "reply" ? "Signature for replies copied" : "Signature for new emails copied";
     status.textContent = !ok ? "Your browser blocked copying. Try Chrome, Edge or Firefox."
       : ex ? what + ", with example details still in it." : what + ". Paste it into Gmail.";
     status.classList.toggle("bad", !ok || ex > 0);

@@ -10,8 +10,8 @@ Make a Gmail signature by editing it in place, then paste it into Gmail.
 
 - **Edit the signature itself.** Click any text on the large preview to type over it, including labels such as "Mobile". Click a link or the photo to change its address.
 - **Add what you need:** phone, email, website, address; GitHub, LinkedIn, X, Bluesky, Mastodon, Instagram, YouTube, Dribbble, Medium, Stack Overflow; App Store and Google Play; a booking link or any other link; pronouns, a tagline and small print.
-- **Arrange it.** Drag lines and links to reorder them, or use the arrows that appear on hover. The Layout panel offers side by side, stacked, two columns or compact; photo shape and size; contact on one line or one per line; labels as words, icons or none; links as words, icons or both; icons in brand colours, grey or white on the accent colour; a divider; and the order of the tagline, contact and links.
-- **Two versions.** Copy the full signature for new emails and a short one for replies. Both are copied as rich text, ready for Gmail's signature box.
+- **Arrange it.** Drag a contact line by the handle that appears beside it, or a link by the link itself; the arrows that appear on hover do the same. The Layout panel opens beside the signature, so every change shows as you make it. It offers side by side, stacked, two columns or compact; photo shape and size; contact on one line or one per line; labels as words, icons or none; links as words, icons or both; icons in brand colours, grey or white on the accent colour; a divider; and the order of the tagline, contact and links.
+- **Two versions, matching Gmail's two settings.** "Copy for new emails" copies the full signature; "Copy for replies" copies a shorter one with just the name, title and links, so long threads don't repeat the whole block. Both are copied as rich text, ready for Gmail's signature box.
 - **Checks as you go:** example details still in use, photo links that don't load, the accent colour's contrast against white, and Gmail's 10,000-character limit.
 - **Private.** Details are saved in the browser's `localStorage` and sent nowhere.
 

@@ -20,6 +20,7 @@
   --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --dock-space: 104px; /* the bottom toolbar's height and offset, kept clear by the Layout panel */
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -150,20 +151,33 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
   box-shadow: 0 18px 40px -16px rgba(0,0,0,.8);
 }
 .vr { width: 1px; height: 24px; background: var(--line); flex: none; }
-.sheet {
-  position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
-  width: min(680px, calc(100vw - 32px)); max-height: min(70vh, 640px); overflow: auto;
-  background: #1a1d25; border: 1px solid var(--line-strong); border-radius: 18px; padding: 16px 18px 18px;
-  box-shadow: 0 30px 70px -20px rgba(0,0,0,.9); display: grid; gap: 16px;
+@media (max-width: 600px) {
+  .dock { gap: 8px; padding: 8px; }
+  .dock .copy, .dock .ghost { height: 38px; padding: 0 12px; font-size: .86rem; }
 }
+/* The Layout panel sits beside the signature, so each change shows as it's made.
+   Below 1100px it goes under the signature, and the signature stays pinned at the top. */
+.stage.panel-open { grid-template-columns: minmax(0, 1fr) 340px; column-gap: 28px; align-items: start; }
+.stage.panel-open > .poster, .stage.panel-open > .mail, .stage.panel-open > .view-switch { grid-column: 1; }
+.stage.panel-open > .sheet { grid-column: 2; grid-row: 1 / span 3; position: sticky; top: 16px; max-height: calc(100vh - 16px - var(--dock-space)); }
+@media (max-width: 1100px) {
+  .stage.panel-open { grid-template-columns: minmax(0, 1fr); }
+  .stage.panel-open > .sheet { grid-column: 1; grid-row: auto; position: static; width: min(560px, 100%); max-height: none; }
+  .stage.panel-open > .poster, .stage.panel-open > .mail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 5; }
+}
+.sheet {
+  position: relative; z-index: 2; width: 100%; max-height: calc(100vh - 32px); overflow: auto;
+  background: #1a1d25; border: 1px solid var(--line-strong); border-radius: 18px; padding: 14px 16px 18px;
+  box-shadow: 0 30px 70px -20px rgba(0,0,0,.9); display: grid; gap: 16px; align-content: start;
+}
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .sheet h3 { margin: 0; font: 700 1.05rem/1.2 var(--display); }
-.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-@media (max-width: 560px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.sheet .done { display: inline-flex; align-items: center; height: 30px; padding: 0 14px; border: 0; border-radius: 9px; background: var(--text); color: var(--page); font: 600 .84rem/1 var(--body); cursor: pointer; }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .tile { display: grid; gap: 6px; justify-items: center; align-content: center; font: 500 .8rem/1.2 var(--body); color: var(--muted); background: var(--raised); border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px 9px; cursor: pointer; }
 .tile svg { width: 64px; height: 38px; fill: currentColor; display: block; }
 .tile[aria-checked="true"] { color: var(--text); border-color: var(--l5); box-shadow: 0 0 0 1px var(--l5) inset; }
-.opts-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; align-items: start; }
-@media (max-width: 560px) { .opts-grid { grid-template-columns: minmax(0, 1fr); } }
+.opts-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
 .opt { display: grid; gap: 7px; min-width: 0; align-content: start; justify-items: start; }
 .opt > span { font: 500 .78rem/1 var(--body); color: var(--muted); }
 .opt .dseg img { width: 14px; height: 14px; display: block; flex: none; }
@@ -181,8 +195,16 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 /* ---------- Hover bar ---------- */
 .hoverbar { position: absolute; z-index: 11; display: flex; align-items: center; gap: 2px; background: #1d212a; border: 1px solid var(--line-strong); border-radius: 10px; padding: 3px; box-shadow: 0 10px 24px -10px rgba(0,0,0,.8); }
 .hoverbar .ib { border-color: transparent; }
-.hoverbar .grip { cursor: grab; color: var(--muted); }
-.hoverbar .grip:active { cursor: grabbing; }
+
+/* Handle beside a contact line, on the white card */
+.grip {
+  position: absolute; z-index: 11; display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #8f9a95; cursor: grab;
+}
+.grip:hover, .grip.active { background: var(--edit-soft); color: #4b3fb8; }
+.grip:active { cursor: grabbing; }
+.sig .dragging { opacity: .4; }
+.sig .lnk[draggable="true"] { -webkit-user-drag: element; }
 .hoverbar .rm { width: auto; padding: 0 9px; gap: 5px; font: 600 .8rem/1 var(--body); color: #ff8fb9; }
 
 /* ---------- Pop-ups ---------- */

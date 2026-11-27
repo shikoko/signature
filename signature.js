@@ -36,7 +36,7 @@ window.Signature = (function () {
   const OPTIONAL = { pronouns: "Pronouns", company: "Company", tagline: "Tagline", disclaimer: "Small print" };
 
   const EXAMPLE = {
-    name: "Alex Rivera", pronouns: "", title: "Android Engineer", company: "Northwind Apps", tagline: "", disclaimer: "",
+    name: "Jane Doe", pronouns: "", title: "Android Engineer", company: "Northwind Apps", tagline: "", disclaimer: "",
     show: { pronouns: false, company: true, tagline: false, disclaimer: false },
     photo: EXAMPLE_PHOTO,
     items: [
@@ -48,7 +48,7 @@ window.Signature = (function () {
     ],
     blocks: ["tagline", "contact", "links"],
     layout: "side", photoShape: "circle", photoSize: "M", showPhoto: true, divider: true,
-    labels: "icons", contactAs: "lines", linksAs: "icons", iconStyle: "accent",
+    labels: "icons", contactAs: "lines", linksAs: "icons", iconStyle: "brand",
     accent: "#5b3fd6", edited: false
   };
 
@@ -190,7 +190,8 @@ window.Signature = (function () {
       const wrap = (i, inner) => {
         if (edit) {
           const has = !!linkUrl(i);
-          return '<span class="lnk' + (has ? "" : " missing") + '" role="button" tabindex="0"' + itemAttr(i) + ' title="' + (has ? "Edit " : "Add your ") + esc(label(i)) + ' link">' + inner + "</span>";
+          return '<span class="lnk' + (has ? "" : " missing") + '" role="button" tabindex="0" draggable="true"' + itemAttr(i) +
+            ' title="Click to ' + (has ? "edit" : "add") + " your " + esc(label(i)) + ' link, or drag it to move it">' + inner + "</span>";
         }
         return '<a href="' + esc(linkUrl(i)) + '" style="color:' + acc + ';text-decoration:none;font-weight:bold;">' + inner + "</a>";
       };
