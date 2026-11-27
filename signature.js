@@ -104,15 +104,18 @@ window.Signature = (function () {
     const p = String(name || "").split(/\s+/).filter(Boolean);
     return p.length ? (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase() : "?";
   }
-  function shown(st, key) { return !!(st.show[key] || (st[key] || "").trim()); }
+  // Whether an extra (pronouns, company, tagline, small print) is in this signature. Its text is
+  // shared with the other signature, which may leave it out.
+  function shown(st, key) { return !!st.show[key]; }
   function iconPath(set, type) { return ICONS + set + "/" + type + ".png"; }
   // Where the photo loads from on this page: the example photo ships with the site.
   function photoSrc(st) { return st.photo === EXAMPLE_PHOTO ? "assets/example-photo.png" : cleanUrl(st.photo); }
   const uid = () => "i" + Math.random().toString(36).slice(2, 9);
 
   // ---------- renderer ----------
+  // `st` is one signature: the one for new emails, or the one for replies (st.reply).
   // env.failed: photo links that didn't load in this browser, shown as initials instead.
-  function render(st, mode, variant, env) {
+  function render(st, mode, env) {
     env = env || {};
     const edit = mode === "edit", exp = mode === "export";
     const acc = /^#[0-9a-f]{6}$/i.test(st.accent || "") ? st.accent : EXAMPLE.accent;
@@ -254,14 +257,14 @@ window.Signature = (function () {
       ? "<table " + TBL + '><tr><td data-opt="disclaimer" style="' + ff + "padding-top:12px;font-size:10px;line-height:14px;color:" + FAINT + ';max-width:520px;">' +
         field("disclaimer", "Small print, like a confidentiality note", "") + "</td></tr></table>" : "";
 
-    const layout = variant === "reply" ? "compact" : st.layout;
+    const layout = st.layout;
     let body;
     if (layout === "compact") {
       const top = nameRow + (roleRow ? '<span style="color:' + SEP + ';">&nbsp;&nbsp;|&nbsp;&nbsp;</span>' + roleRow : "");
-      const contactLine = variant === "reply" || !contactItems.length ? "" : contactItems.map((i) =>
+      const contactLine = !contactItems.length ? "" : contactItems.map((i) =>
         '<span style="white-space:nowrap;"' + itemAttr(i) + ">" + contactValue(i) + "</span>").join('<span style="color:' + SEP + ';">&nbsp;&nbsp;&middot;&nbsp;&nbsp;</span>');
       body = "<table " + TBL + ">" + row(top, 0, "font-size:13px;line-height:21px;") + row(contactLine, 4, "font-size:12px;line-height:18px;") +
-        row(linksHtml(variant === "reply" ? "words" : st.linksAs), 4, "font-size:12px;line-height:18px;") + "</table>";
+        row(linksHtml(st.linksAs), 4, "font-size:12px;line-height:18px;") + "</table>";
     } else if (layout === "stacked") {
       const p = photo();
       const rule = st.divider ? '<tr><td style="padding:10px 0 2px;"><table ' + TBL + '><tr><td style="width:40px;height:2px;background-color:' + acc + ';font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>' : "";
@@ -281,23 +284,21 @@ window.Signature = (function () {
         '<td style="vertical-align:middle;' + (p && st.divider ? "border-left:1px solid " + RULE + ";padding-left:" + gap + "px;" : "") + '">' +
         "<table " + TBL + ">" + identityRows + st.blocks.map((b) => blockRow[b]()).join("") + "</table></td></tr></table>";
     }
-    return body + (variant === "reply" ? "" : disclaimer);
+    return body + disclaimer;
   }
 
-  function plainText(st, variant) {
-    const lines = [];
-    lines.push([st.name, (st.pronouns || "").trim() && "(" + st.pronouns.trim() + ")"].filter(Boolean).join(" "));
-    const role = [st.title, shown(st, "company") && st.company].filter(Boolean).join(" · ");
+  function plainText(st) {
+    const lines = [], text = (key) => shown(st, key) ? (st[key] || "").trim() : "";
+    lines.push([st.name, text("pronouns") && "(" + text("pronouns") + ")"].filter(Boolean).join(" "));
+    const role = [st.title, text("company")].filter(Boolean).join(" · ");
     if (role) lines.push(role);
-    if (variant !== "reply") {
-      if ((st.tagline || "").trim()) lines.push(st.tagline.trim());
-      st.items.filter((i) => TYPES[i.type].group === "contact" && (i.value || "").trim()).forEach((i) => {
-        const lab = i.label != null ? i.label : TYPES[i.type].label;
-        lines.push((st.labels === "words" && lab ? lab + ": " : "") + i.value.trim());
-      });
-    }
+    if (text("tagline") && st.layout !== "compact") lines.push(text("tagline"));
+    st.items.filter((i) => TYPES[i.type].group === "contact" && (i.value || "").trim()).forEach((i) => {
+      const lab = i.label != null ? i.label : TYPES[i.type].label;
+      lines.push((st.labels === "words" && st.layout !== "compact" && lab ? lab + ": " : "") + i.value.trim());
+    });
     st.items.filter((i) => TYPES[i.type].group === "links" && linkUrl(i)).forEach((i) => lines.push((i.text || TYPES[i.type].label) + ": " + linkUrl(i)));
-    if (variant !== "reply" && (st.disclaimer || "").trim()) lines.push("", st.disclaimer.trim());
+    if (text("disclaimer")) lines.push("", text("disclaimer"));
     return lines.filter((x, k) => x || k > 0).join("\n");
   }
 
@@ -316,8 +317,8 @@ window.Signature = (function () {
     holder.remove();
     return ok;
   }
-  async function copy(st, variant) {
-    const html = render(st, "export", variant), text = plainText(st, variant);
+  async function copy(st) {
+    const html = render(st, "export"), text = plainText(st);
     try {
       if (navigator.clipboard && window.ClipboardItem) {
         await navigator.clipboard.write([new ClipboardItem({
@@ -330,16 +331,52 @@ window.Signature = (function () {
     return copyViaSelection(html);
   }
 
+  // ---------- the two signatures ----------
+  // The signature for new emails is the stored object itself; the one for replies is st.reply.
+  // Both are complete signatures the renderer draws the same way. They share the details below
+  // and each item's text, matched by id; each keeps its own items, their order, which extras it
+  // shows, and its design.
+  const DETAILS = ["name", "pronouns", "title", "company", "tagline", "disclaimer", "photo", "localPhoto"];
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+  function syncDetails(from, to) {
+    DETAILS.forEach((k) => { to[k] = from[k]; });
+    to.items = to.items.map((i) => {
+      const f = from.items.find((x) => x.id === i.id);
+      return f ? Object.assign({}, f) : i;
+    });
+  }
+  // The reply signature until someone changes it: the same signature, compact, with the links
+  // as words and no contact details, tagline or small print. While it's like this (custom false)
+  // it's made again from the signature for new emails after each change, so it keeps up with it.
+  function replyFrom(st) {
+    const r = clone(st);
+    delete r.reply;
+    r.items = r.items.filter((i) => TYPES[i.type].group === "links");
+    r.show = Object.assign({}, r.show, { tagline: false, disclaimer: false });
+    r.layout = "compact";
+    r.linksAs = "words";
+    r.custom = false;
+    return r;
+  }
+
   // Details are kept in this browser only. Private windows may refuse storage; the page still works.
   function load(key) {
-    let st = JSON.parse(JSON.stringify(EXAMPLE));
+    let st = clone(EXAMPLE), saved = null;
     try {
       const raw = localStorage.getItem(key);
       if (raw) {
-        const saved = JSON.parse(raw);
+        saved = JSON.parse(raw);
         if (saved && Array.isArray(saved.items)) st = Object.assign(st, saved);
+        else saved = null;
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) { saved = null; }
+    const r = saved && saved.reply;
+    if (!r) {
+      // Saved before replies had their own signature, when an extra with text always showed.
+      Object.keys(OPTIONAL).forEach((k) => { if ((st[k] || "").trim()) st.show[k] = true; });
+    }
+    st.reply = r && r.custom && Array.isArray(r.items) && r.show ? Object.assign(replyFrom(st), r) : replyFrom(st);
+    syncDetails(st, st.reply);
     return st;
   }
   function save(key, st) { try { localStorage.setItem(key, JSON.stringify(st)); } catch (e) { /* ignore */ } }
@@ -356,7 +393,7 @@ window.Signature = (function () {
 
   return {
     TYPES, OPTIONAL, EXAMPLE, FONTS, LIMIT,
-    render, plainText, copy, load, save, examplesInUse, clearExamples,
+    render, plainText, copy, load, save, examplesInUse, clearExamples, syncDetails, replyFrom,
     contrast, linkUrl, githubHandle, shown, uid, esc, iconPath, cleanUrl
   };
 })();
