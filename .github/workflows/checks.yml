@@ -1,0 +1,28 @@
+name: Checks
+
+# Runs on every pull request, so a change that would stop the site from publishing is
+# caught before it's merged.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Published icons haven't changed
+        run: node .github/scripts/check-icons.mjs
+
+      - name: Footer script tests
+        run: node --test .github/scripts/tidy-footers.test.mjs

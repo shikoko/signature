@@ -27,6 +27,7 @@ Gmail removes stylesheets, web fonts, SVG and embedded `data:` images from signa
 - `icons/v1/`: the icons the copied signatures link to
 - `tools/icons/`: the script that draws the icons
 - `assets/`: the favicon, the example photo and the social preview image
+- `.github/workflows/`: publishing the site, checks on pull requests, and tidying pull request footers
 
 ## Running it locally
 
@@ -37,5 +38,9 @@ python3 -m http.server 8000
 ```
 
 Then open http://localhost:8000.
+
+## Publishing
+
+Every merge into `main` publishes the site to GitHub Pages through the Website workflow. It first checks that no icon in `icons/v1/` has changed or gone, since signatures in people's mail link to them, and publishes nothing if one has. Only the page's own files are published.
 
 Made by [Bogdan Roatis](https://shikoko.github.io/).
