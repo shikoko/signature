@@ -1,0 +1,444 @@
+(function () {
+  "use strict";
+
+  const S = window.Signature, $ = (id) => document.getElementById(id);
+  const KEY = "gmail-signature-builder.v2";
+  const PRESETS = ["#5b3fd6", "#c2185b", "#0a6aa1", "#087a45", "#a35400", "#374151"];
+  const st = S.load(KEY);
+  const failed = new Set(); // photo links that didn't load here
+  const page = $("page"), sig = $("sig"), pop = $("pop"), bar = $("hoverbar"), sheet = $("sheet");
+  let mode = "edit", which = "full";
+  let barFor = null; // the line or link the hover bar is showing for
+
+  const svg = (d) => '<svg class="i" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>';
+  const ARROW = {
+    up: svg("M8 13V3M4 7l4-4 4 4"),
+    down: svg("M8 3v10M4 9l4 4 4-4"),
+    left: svg("M13 8H3M7 4L3 8l4 4"),
+    right: svg("M3 8h10M9 4l4 4-4 4")
+  };
+
+  // contenteditable="plaintext-only" keeps pasted formatting out; older browsers get "true" and a paste handler.
+  S.render.ce = (() => {
+    const d = document.createElement("div");
+    try { d.contentEditable = "plaintext-only"; } catch (e) { return "true"; }
+    return d.contentEditable === "plaintext-only" ? "plaintext-only" : "true";
+  })();
+
+  // In the page's dark menus, black and dark-grey icons use their white version so they show.
+  const DARK_ICONS = new Set(["github", "x", "medium", "googleplay", "phone", "email", "website", "address", "booking", "custom"]);
+  const uiIcon = (type) => S.iconPath(DARK_ICONS.has(type) ? "white" : "brand", type);
+  const save = () => { st.edited = true; S.save(KEY, st); };
+  const item = (id) => st.items.find((i) => i.id === id);
+  const groupOf = (i) => S.TYPES[i.type].group;
+  const env = { failed: failed };
+
+  // ---------- render ----------
+  function watchPhotos(root) {
+    root.querySelectorAll("img[data-photo]").forEach((img) => {
+      img.addEventListener("error", () => { failed.add(img.dataset.photo); renderAll(); }, { once: true });
+    });
+  }
+  // The poster shows the signature larger than it will be in an email. Rather than CSS zoom,
+  // which browsers size tables wrongly under, the edit view's pixel sizes are scaled directly.
+  const scaleFor = () => (window.innerWidth > 960 ? 1.5 : window.innerWidth > 600 ? 1.25 : 1);
+  let scale = scaleFor();
+  function scaled(html, k) {
+    if (k === 1) return html;
+    const px = (n) => String(Math.round(parseFloat(n) * k * 100) / 100);
+    return html
+      .replace(/style="([^"]*)"/g, (m, css) => 'style="' + css.replace(/(\d+(?:\.\d+)?)px/g, (x, n) => px(n) + "px") + '"')
+      .replace(/ (width|height)="(\d+)"/g, (m, a, n) => " " + a + '="' + px(n) + '"');
+  }
+  function renderSig() {
+    bar.hidden = true;
+    barFor = null;
+    sig.innerHTML = scaled(S.render(st, "edit", "full", env), scale);
+    watchPhotos(sig);
+  }
+  function renderAll() {
+    renderSig();
+    $("tip").hidden = !!st.edited;
+    $("poster").hidden = mode !== "edit";
+    $("mailView").hidden = mode !== "email";
+    if (mode === "email") {
+      const html = S.render(st, "preview", which, env);
+      $("mailBody").innerHTML = which === "reply"
+        ? "<p>Sounds good. The crash fix goes out in Monday's build.</p>" + html +
+          '<div class="quote">On Thu, Nov 26, 2026 at 6:04 PM Ana wrote:<br>Can we get the crash fix in before the release?</div>'
+        : "<p>Hi Ana,</p><p>The TestFlight build with the new onboarding flow is up (1.8.0, build 412). Let me know if anything looks off on your device.</p><p>Thanks,</p>" +
+          '<div class="sig-slot">' + html + "</div>";
+      watchPhotos($("mailBody"));
+    }
+    document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-checked", b.dataset.mode === mode));
+    document.querySelectorAll("[data-which]").forEach((b) => b.setAttribute("aria-checked", b.dataset.which === which));
+    document.querySelectorAll(".sw").forEach((b) => b.setAttribute("aria-checked", b.dataset.hex === st.accent));
+    $("customColor").value = st.accent;
+    if (!sheet.hidden) buildSheet();
+    meta();
+  }
+  function meta() {
+    const ex = S.examplesInUse(st), r = S.contrast(st.accent), size = S.render(st, "export", "full").length;
+    const parts = [];
+    if (ex) parts.push('<span>Example details: <button type="button" id="clear">clear them</button></span>');
+    if (st.photo && st.showPhoto && failed.has(S.cleanUrl(st.photo))) parts.push('<span class="bad">Photo link didn\'t load</span>');
+    parts.push('<span class="' + (r < 4.5 ? "bad" : "") + '">' + r.toFixed(1) + ":1 contrast" + (r < 4.5 ? ", too light" : "") + "</span>");
+    parts.push('<span class="' + (size > S.LIMIT ? "bad" : "") + '">' + size.toLocaleString("en-GB") + " / " + S.LIMIT.toLocaleString("en-GB") + " characters</span>");
+    $("meta").innerHTML = parts.join("");
+    const clear = $("clear");
+    if (clear) clear.addEventListener("click", () => {
+      S.clearExamples(st); save(); mode = "edit"; renderAll();
+      const n = sig.querySelector('[data-key="name"]');
+      if (n) n.focus();
+    });
+  }
+
+  // ---------- typing in the signature ----------
+  sig.addEventListener("input", (e) => {
+    const el = e.target.closest(".ed");
+    if (!el) return;
+    const text = el.textContent.replace(/\n/g, " ");
+    if (!text) el.innerHTML = "";
+    if (el.dataset.key) st[el.dataset.key] = text;
+    else if (el.dataset.itemValue) item(el.dataset.itemValue).value = text;
+    else if (el.dataset.itemLabel) item(el.dataset.itemLabel).label = text;
+    save();
+    $("tip").hidden = true;
+    meta();
+  });
+  sig.addEventListener("keydown", (e) => {
+    if (e.target.closest(".ed") && e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+    const l = e.target.closest(".lnk");
+    if (l && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openLink(l.dataset.item, l); }
+  });
+  sig.addEventListener("paste", (e) => {
+    if (S.render.ce === "plaintext-only" || !e.target.closest(".ed")) return;
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData("text/plain").replace(/\n/g, " ");
+    document.execCommand("insertText", false, text);
+  });
+  // Leaving the signature tidies it: empty contact lines and empty optional fields go away.
+  sig.addEventListener("focusout", (e) => {
+    const to = e.relatedTarget;
+    if (to && (sig.contains(to) || bar.contains(to) || pop.contains(to))) return;
+    setTimeout(() => { if (!sig.contains(document.activeElement)) tidy(); }, 0);
+  });
+  function tidy() {
+    const before = JSON.stringify(st);
+    st.items = st.items.filter((i) => groupOf(i) !== "contact" || (i.value || "").trim());
+    Object.keys(S.OPTIONAL).forEach((k) => { if (!(st[k] || "").trim()) { st.show[k] = false; st[k] = ""; } });
+    if (JSON.stringify(st) !== before) { save(); renderAll(); }
+  }
+  sig.addEventListener("click", (e) => {
+    const l = e.target.closest(".lnk");
+    if (l) { openLink(l.dataset.item, l); return; }
+    const p = e.target.closest(".photo-btn");
+    if (p) openPhoto(p);
+  });
+
+  // ---------- hover bar: drag, move, remove ----------
+  let hideTimer = null;
+  const target = (el) => (el && el.closest ? el.closest("[data-item], [data-opt]") : null);
+  function showBar(el) {
+    if (!el || mode !== "edit") return;
+    if (!pop.hidden && pop.dataset.for === (el.dataset.item || el.dataset.opt)) return;
+    clearTimeout(hideTimer);
+    sig.querySelectorAll(".hl").forEach((x) => x.classList.remove("hl"));
+    el.classList.add("hl");
+    barFor = el;
+    const isItem = !!el.dataset.item, vertical = el.tagName === "TR";
+    $("hbGrip").hidden = $("hbPrev").hidden = $("hbNext").hidden = !isItem;
+    $("hbPrev").innerHTML = vertical ? ARROW.up : ARROW.left;
+    $("hbNext").innerHTML = vertical ? ARROW.down : ARROW.right;
+    $("hbPrev").setAttribute("aria-label", vertical ? "Move up" : "Move left");
+    $("hbNext").setAttribute("aria-label", vertical ? "Move down" : "Move right");
+    if (isItem) {
+      const sib = st.items.filter((i) => groupOf(i) === el.dataset.group);
+      const k = sib.findIndex((i) => i.id === el.dataset.item);
+      $("hbPrev").disabled = k <= 0;
+      $("hbNext").disabled = k >= sib.length - 1;
+    }
+    bar.hidden = false;
+    const pr = page.getBoundingClientRect(), r = el.getBoundingClientRect();
+    bar.style.left = Math.max(8, Math.min(r.left - pr.left, pr.width - bar.offsetWidth - 8)) + "px";
+    bar.style.top = (r.top - pr.top - bar.offsetHeight - 6) + "px";
+  }
+  function hideBar(now) {
+    clearTimeout(hideTimer);
+    const go = () => { bar.hidden = true; barFor = null; sig.querySelectorAll(".hl").forEach((x) => x.classList.remove("hl")); };
+    if (now) go(); else hideTimer = setTimeout(go, 350);
+  }
+  sig.addEventListener("mouseover", (e) => { const t = target(e.target); if (t) showBar(t); });
+  sig.addEventListener("mouseleave", () => hideBar());
+  sig.addEventListener("focusin", (e) => { const t = target(e.target); if (t) showBar(t); });
+  bar.addEventListener("mouseenter", () => clearTimeout(hideTimer));
+  bar.addEventListener("mouseleave", () => hideBar());
+
+  function swap(i, other) {
+    const a = st.items.indexOf(i), b = st.items.indexOf(other);
+    st.items[a] = other;
+    st.items[b] = i;
+  }
+  function move(id, dir) {
+    const i = item(id), sib = st.items.filter((x) => groupOf(x) === groupOf(i)), other = sib[sib.indexOf(i) + dir];
+    if (!other) return;
+    swap(i, other);
+    save(); renderAll();
+    const el = sig.querySelector('[data-item="' + id + '"]');
+    if (el) showBar(el);
+  }
+  $("hbPrev").addEventListener("click", () => { if (barFor && barFor.dataset.item) move(barFor.dataset.item, -1); });
+  $("hbNext").addEventListener("click", () => { if (barFor && barFor.dataset.item) move(barFor.dataset.item, 1); });
+  $("hbRemove").addEventListener("click", () => {
+    if (!barFor) return;
+    if (barFor.dataset.item) st.items = st.items.filter((i) => i.id !== barFor.dataset.item);
+    else { st.show[barFor.dataset.opt] = false; st[barFor.dataset.opt] = ""; }
+    save(); hideBar(true); renderAll();
+  });
+
+  // Drag from the grip onto another line or link of the same kind.
+  let dragId = null;
+  $("hbGrip").addEventListener("dragstart", (e) => {
+    if (!barFor || !barFor.dataset.item) { e.preventDefault(); return; }
+    dragId = barFor.dataset.item;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", dragId);
+    try { e.dataTransfer.setDragImage(barFor, 12, 12); } catch (err) { /* not supported */ }
+    setTimeout(() => { bar.hidden = true; }, 0);
+  });
+  const clearDrop = () => sig.querySelectorAll(".drop-before, .drop-after").forEach((x) => x.classList.remove("drop-before", "drop-after"));
+  sig.addEventListener("dragover", (e) => {
+    if (!dragId) return;
+    const t = e.target.closest("[data-item]");
+    clearDrop();
+    if (!t || t.dataset.item === dragId || t.dataset.group !== groupOf(item(dragId))) return;
+    e.preventDefault();
+    const r = t.getBoundingClientRect();
+    const before = t.tagName === "TR" ? e.clientY < r.top + r.height / 2 : e.clientX < r.left + r.width / 2;
+    t.classList.add(before ? "drop-before" : "drop-after");
+  });
+  sig.addEventListener("drop", (e) => {
+    const t = sig.querySelector(".drop-before, .drop-after");
+    if (!dragId || !t) return;
+    e.preventDefault();
+    const moving = item(dragId), before = t.classList.contains("drop-before");
+    st.items = st.items.filter((i) => i !== moving);
+    const at = st.items.findIndex((i) => i.id === t.dataset.item);
+    st.items.splice(before ? at : at + 1, 0, moving);
+    dragId = null;
+    save(); renderAll();
+  });
+  document.addEventListener("dragend", () => { dragId = null; clearDrop(); });
+
+  // ---------- pop-ups ----------
+  // Opens under the anchor, or above it when asked and there's room on screen.
+  function placePop(anchor, preferAbove) {
+    pop.hidden = false;
+    const pr = page.getBoundingClientRect(), r = anchor.getBoundingClientRect(), h = pop.offsetHeight;
+    const above = preferAbove && r.top - h - 10 >= 8;
+    pop.style.left = Math.max(12, Math.min(r.left - pr.left + r.width / 2 - pop.offsetWidth / 2, pr.width - pop.offsetWidth - 12)) + "px";
+    pop.style.top = Math.max(8, above ? r.top - pr.top - h - 10 : r.bottom - pr.top + 10) + "px";
+  }
+  function closePop() {
+    if (pop.hidden) return;
+    const id = pop.dataset.for;
+    pop.hidden = true;
+    pop.dataset.for = "";
+    const i = id && item(id);
+    if (i && groupOf(i) === "links" && !(i.value || "").trim()) { st.items = st.items.filter((x) => x !== i); save(); }
+    renderAll();
+  }
+  document.addEventListener("mousedown", (e) => {
+    if (!pop.hidden && !pop.contains(e.target) && !e.target.closest(".lnk, .photo-btn, #addBtn")) closePop();
+    if (!sheet.hidden && !$("dockWrap").contains(e.target)) toggleSheet(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!pop.hidden) closePop();
+    if (!sheet.hidden) toggleSheet(false);
+  });
+  window.addEventListener("resize", () => {
+    if (!pop.hidden) closePop();
+    hideBar(true);
+    if (scaleFor() !== scale && !sig.contains(document.activeElement)) { scale = scaleFor(); renderSig(); }
+  });
+
+  function openLink(id, anchor) {
+    const i = item(id), t = S.TYPES[i.type];
+    const sib = st.items.filter((x) => groupOf(x) === "links"), k = sib.indexOf(i);
+    hideBar(true);
+    pop.dataset.for = id;
+    pop.innerHTML = '<h3><img src="' + uiIcon(i.type) + '" alt="">' + S.esc(t.label) + "</h3>" +
+      '<label>Link<input id="pv" autocomplete="off" placeholder="' + S.esc(t.ph) + '"></label>' +
+      '<label>Shown as<input id="pt" autocomplete="off" placeholder="' + S.esc(t.label) + '"></label>' +
+      '<div class="row"><span class="mv"><button type="button" class="ib" id="pl" aria-label="Move left"' + (k <= 0 ? " disabled" : "") + ">" + ARROW.left + "</button>" +
+      '<button type="button" class="ib" id="pr" aria-label="Move right"' + (k >= sib.length - 1 ? " disabled" : "") + ">" + ARROW.right + "</button></span>" +
+      '<span><button type="button" class="link rm" id="prm">Remove</button><button type="button" class="done" id="pd">Done</button></span></div>';
+    $("pv").value = i.value || "";
+    $("pt").value = i.text || "";
+    $("pv").addEventListener("input", (e) => { i.value = e.target.value; save(); meta(); });
+    $("pt").addEventListener("input", (e) => { i.text = e.target.value; save(); renderSig(); meta(); });
+    [$("pv"), $("pt")].forEach((x) => x.addEventListener("keydown", (e) => { if (e.key === "Enter") closePop(); }));
+    $("pd").addEventListener("click", closePop);
+    $("prm").addEventListener("click", () => {
+      st.items = st.items.filter((x) => x !== i);
+      save(); pop.hidden = true; pop.dataset.for = ""; renderAll();
+    });
+    const mv = (d) => {
+      const other = sib[k + d];
+      if (!other) return;
+      swap(i, other);
+      save(); renderAll();
+      const el = sig.querySelector('[data-item="' + id + '"]');
+      if (el) openLink(id, el);
+    };
+    $("pl").addEventListener("click", () => mv(-1));
+    $("pr").addEventListener("click", () => mv(1));
+    placePop(anchor);
+    $("pv").focus();
+  }
+
+  function openPhoto(anchor) {
+    const gh = S.githubHandle(st);
+    hideBar(true);
+    pop.dataset.for = "photo";
+    pop.innerHTML = "<h3>Photo</h3>" +
+      '<label>Photo link<input id="pp" autocomplete="off" placeholder="https://…/photo.jpg"></label>' +
+      '<p class="note">A square image works best. It has to be online, so paste a link to it. To reuse your current photo, right-click it in Gmail\'s signature settings and choose Copy image address.</p>' +
+      '<div class="row"><span>' + (gh ? '<button type="button" class="link" id="pgh">Use my GitHub avatar (@' + S.esc(gh) + ")</button>" : "") + "</span>" +
+      '<span><button type="button" class="link rm" id="prm">Remove</button><button type="button" class="done" id="pd">Done</button></span></div>';
+    $("pp").value = st.photo || "";
+    $("pp").addEventListener("input", (e) => { st.photo = e.target.value.trim(); save(); meta(); });
+    $("pp").addEventListener("keydown", (e) => { if (e.key === "Enter") closePop(); });
+    if (gh) $("pgh").addEventListener("click", () => { st.photo = "https://github.com/" + gh + ".png?size=200"; $("pp").value = st.photo; save(); meta(); });
+    $("prm").addEventListener("click", () => { st.photo = ""; save(); closePop(); });
+    $("pd").addEventListener("click", closePop);
+    placePop(anchor);
+    $("pp").focus();
+  }
+
+  const ADD_GROUPS = [
+    ["Contact", ["phone", "email", "website", "address"]],
+    ["Profiles", ["github", "linkedin", "x", "bluesky", "mastodon", "instagram", "youtube", "dribbble", "medium", "stackoverflow"]],
+    ["Apps and links", ["appstore", "googleplay", "booking", "custom"]]
+  ];
+  function openAdd(anchor) {
+    const extras = Object.keys(S.OPTIONAL).filter((k) => !S.shown(st, k));
+    hideBar(true);
+    pop.dataset.for = "add";
+    pop.innerHTML = "<h3>Add to your signature</h3>" + ADD_GROUPS.map(([g, types]) =>
+      '<div class="grp">' + g + '</div><div class="opts">' + types.map((t) =>
+        '<button type="button" data-add="' + t + '"><img src="' + uiIcon(t) + '" alt="">' + S.esc(S.TYPES[t].label) + "</button>").join("") + "</div>").join("") +
+      (extras.length ? '<div class="grp">Extras</div><div class="opts">' + extras.map((k) =>
+        '<button type="button" data-opt-add="' + k + '"><span class="dot"></span>' + S.OPTIONAL[k] + "</button>").join("") + "</div>" : "");
+    pop.querySelectorAll("[data-add]").forEach((b) => b.addEventListener("click", () => addItem(b.dataset.add)));
+    pop.querySelectorAll("[data-opt-add]").forEach((b) => b.addEventListener("click", () => {
+      st.show[b.dataset.optAdd] = true;
+      save(); pop.hidden = true; pop.dataset.for = ""; renderAll();
+      const el = sig.querySelector('[data-key="' + b.dataset.optAdd + '"]');
+      if (el) el.focus();
+    }));
+    placePop(anchor, true);
+  }
+  function addItem(type) {
+    const t = S.TYPES[type], it = { id: S.uid(), type: type, value: "" };
+    if (t.group === "contact") it.label = t.label;
+    st.items.splice(st.items.map(groupOf).lastIndexOf(t.group) + 1, 0, it);
+    save(); pop.hidden = true; pop.dataset.for = ""; renderAll();
+    if (t.group === "contact") {
+      const el = sig.querySelector('[data-item-value="' + it.id + '"]');
+      if (el) el.focus();
+    } else {
+      const el = sig.querySelector('.lnk[data-item="' + it.id + '"]');
+      if (el) openLink(it.id, el);
+    }
+  }
+  $("addBtn").addEventListener("click", (e) => {
+    if (!pop.hidden && pop.dataset.for === "add") closePop(); else openAdd(e.currentTarget);
+  });
+
+  // ---------- layout panel ----------
+  const SCHEMA = {
+    side: '<svg viewBox="0 0 64 38" aria-hidden="true"><circle cx="12" cy="19" r="8"/><rect x="25" y="9" width="1.2" height="20"/><rect x="30" y="10" width="22" height="3.4" rx="1.7"/><rect x="30" y="17" width="16" height="2.2" rx="1.1"/><rect x="30" y="23" width="28" height="2.2" rx="1.1"/></svg>',
+    stacked: '<svg viewBox="0 0 64 38" aria-hidden="true"><circle cx="12" cy="9" r="6"/><rect x="6" y="19" width="24" height="3.4" rx="1.7"/><rect x="6" y="25" width="16" height="2.2" rx="1.1"/><rect x="6" y="31" width="30" height="2.2" rx="1.1"/></svg>',
+    columns: '<svg viewBox="0 0 64 38" aria-hidden="true"><circle cx="9" cy="19" r="5"/><rect x="17" y="15" width="14" height="3" rx="1.5"/><rect x="17" y="20.5" width="10" height="2" rx="1"/><rect x="36" y="8" width="1.2" height="22"/><rect x="41" y="10" width="18" height="2.2" rx="1.1"/><rect x="41" y="16" width="14" height="2.2" rx="1.1"/><rect x="41" y="22" width="16" height="2.2" rx="1.1"/></svg>',
+    compact: '<svg viewBox="0 0 64 38" aria-hidden="true"><rect x="6" y="14" width="18" height="3.4" rx="1.7"/><rect x="27" y="14" width="22" height="3" rx="1.5"/><rect x="6" y="21" width="30" height="2.2" rx="1.1"/></svg>'
+  };
+  function seg(set, opts) {
+    const cur = set === "photoShape" ? (st.showPhoto ? st.photoShape : "none") : set === "divider" ? (st.divider ? "on" : "off") : st[set];
+    return '<div class="dseg" role="radiogroup">' + opts.map(([v, label]) =>
+      '<button type="button" role="radio" data-set="' + set + '" data-val="' + v + '" aria-checked="' + (cur === v) + '">' + label + "</button>").join("") + "</div>";
+  }
+  function buildSheet() {
+    const ic = (set, t) => '<img src="' + S.iconPath(set, t) + '" alt="">';
+    const names = { tagline: "Tagline", contact: "Contact", links: "Links" };
+    sheet.innerHTML = "<h3>Layout</h3>" +
+      '<div class="tiles" role="radiogroup" aria-label="Layout">' + [["side", "Side by side"], ["stacked", "Stacked"], ["columns", "Two columns"], ["compact", "Compact"]].map(([v, l]) =>
+        '<button type="button" class="tile" role="radio" data-set="layout" data-val="' + v + '" aria-checked="' + (st.layout === v) + '">' + SCHEMA[v] + l + "</button>").join("") + "</div>" +
+      '<div class="opts-grid">' +
+      '<div class="opt"><span>Photo</span>' + seg("photoShape", [["circle", "Circle"], ["rounded", "Rounded"], ["square", "Square"], ["none", "None"]]) + "</div>" +
+      '<div class="opt"><span>Photo size</span>' + seg("photoSize", [["S", "Small"], ["M", "Medium"], ["L", "Large"]]) + "</div>" +
+      '<div class="opt"><span>Contact</span>' + seg("contactAs", [["inline", "On one line"], ["lines", "One per line"]]) + "</div>" +
+      '<div class="opt"><span>Labels</span>' + seg("labels", [["none", "None"], ["words", "Words"], ["icons", "Icons"]]) + "</div>" +
+      '<div class="opt"><span>Links</span>' + seg("linksAs", [["words", "Words"], ["icons", "Icons"], ["both", "Both"]]) + "</div>" +
+      '<div class="opt"><span>Icons</span>' + seg("iconStyle", [["brand", ic("brand", "instagram") + "Brand"], ["grey", ic("grey", "github") + "Grey"], ["accent", '<span class="chip">' + ic("white", "github") + "</span>Colour"]]) + "</div>" +
+      '<div class="opt"><span>Divider</span>' + seg("divider", [["on", "On"], ["off", "Off"]]) + "</div>" +
+      '<div class="opt"><span>Order</span><div class="order">' + st.blocks.map((b, k) =>
+        "<div>" + names[b] + "<span>" +
+        '<button type="button" class="ib" data-ord="' + k + '" data-dir="-1" aria-label="Move ' + names[b] + ' up"' + (k === 0 ? " disabled" : "") + ">" + ARROW.up + "</button>" +
+        '<button type="button" class="ib" data-ord="' + k + '" data-dir="1" aria-label="Move ' + names[b] + ' down"' + (k === st.blocks.length - 1 ? " disabled" : "") + ">" + ARROW.down + "</button>" +
+        "</span></div>").join("") + "</div></div>" +
+      "</div>";
+    sheet.querySelectorAll("[data-set]").forEach((b) => b.addEventListener("click", () => {
+      const set = b.dataset.set, v = b.dataset.val;
+      if (set === "photoShape") { st.showPhoto = v !== "none"; if (v !== "none") st.photoShape = v; }
+      else if (set === "divider") st.divider = v === "on";
+      else st[set] = v;
+      save(); renderAll();
+    }));
+    sheet.querySelectorAll("[data-ord]").forEach((b) => b.addEventListener("click", () => {
+      const k = +b.dataset.ord, d = +b.dataset.dir, x = st.blocks[k];
+      st.blocks[k] = st.blocks[k + d];
+      st.blocks[k + d] = x;
+      save(); renderAll();
+    }));
+  }
+  function toggleSheet(open) {
+    sheet.hidden = !open;
+    $("layoutBtn").setAttribute("aria-expanded", open);
+    if (open) hideBar(true);
+    if (open) { closePop(); buildSheet(); }
+  }
+  $("layoutBtn").addEventListener("click", () => toggleSheet(sheet.hidden));
+
+  // ---------- dock, views, copy ----------
+  PRESETS.forEach((hex) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "sw";
+    b.setAttribute("role", "radio");
+    b.setAttribute("aria-label", hex);
+    b.style.background = hex;
+    b.dataset.hex = hex;
+    b.addEventListener("click", () => { st.accent = hex; save(); renderAll(); });
+    $("swatches").appendChild(b);
+  });
+  $("customColor").addEventListener("input", (e) => { st.accent = e.target.value; save(); renderAll(); });
+  document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => { mode = b.dataset.mode; closePop(); hideBar(true); renderAll(); }));
+  document.querySelectorAll("[data-which]").forEach((b) => b.addEventListener("click", () => { which = b.dataset.which; renderAll(); }));
+
+  async function doCopy(variant) {
+    tidy();
+    const ok = await S.copy(st, variant), ex = S.examplesInUse(st), status = $("status");
+    const what = variant === "reply" ? "Reply version copied" : "Signature copied";
+    status.textContent = !ok ? "Your browser blocked copying. Try Chrome, Edge or Firefox."
+      : ex ? what + ", with example details still in it." : what + ". Paste it into Gmail.";
+    status.classList.toggle("bad", !ok || ex > 0);
+    clearTimeout(status._t);
+    status._t = setTimeout(() => { status.textContent = ""; }, 6000);
+  }
+  $("copyFull").addEventListener("click", () => doCopy("full"));
+  $("copyReply").addEventListener("click", () => doCopy("reply"));
+
+  renderAll();
+})();
