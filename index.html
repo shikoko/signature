@@ -69,19 +69,30 @@
   </section>
 
   <div class="dock-wrap" id="dockWrap">
+    <div class="copied" id="copied" role="dialog" aria-labelledby="copiedTitle" hidden>
+      <div class="copied-head"><strong id="copiedTitle"><span class="ok"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></span>Copied. Paste it into Gmail</strong><button type="button" class="x" id="copiedClose" aria-label="Close"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
+      <p class="copied-note" id="copiedNote" hidden></p>
+      <p class="path">Settings <i>→</i> See all settings <i>→</i> Signature <i>→</i> Create new</p>
+      <a class="gm" href="https://mail.google.com/mail/u/0/#settings/general" target="_blank" rel="noopener">Open Gmail settings<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3H3.5v9.5H13V10M9 3h4v4M13 3L7.5 8.5"/></svg></a>
+      <div class="short">
+        <span class="mini" id="shortPic" aria-hidden="true"></span>
+        <div class="txt"><strong>Want a shorter one for replies?</strong><span>Add it as a second signature, then choose it under “On reply/forward use”.</span></div>
+        <button type="button" class="gbtn" id="copyReply">Copy short version</button>
+      </div>
+    </div>
     <div class="dock-note" id="dockNote" role="status" hidden><span><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.8 15 14H1L8 1.8Z"/><path d="M8 6.5v3.2M8 11.8v.1"/></svg><span id="dockNoteText"></span></span><button type="button" class="fix" id="dockFix"></button></div>
     <div class="dock" role="toolbar" aria-label="Signature options">
       <button type="button" class="ghost" id="designBtn" aria-expanded="false" aria-controls="sheet">Design</button>
-      <button type="button" class="ghost" id="copyReply" title="A shorter signature for replies and forwards: your name, title and links">Copy for replies</button>
-      <button type="button" class="copy" id="copyFull" title="The full signature, for new emails">Copy for new emails</button>
+      <button type="button" class="copy" id="copyFull">Copy signature</button>
     </div>
   </div>
   <div class="below"><span class="status" id="status" aria-live="polite"></span><div class="meta" id="meta"></div></div>
+  <span class="sr-only" id="announce" aria-live="polite"></span>
 
   <section class="steps" aria-label="Paste it into Gmail">
-    <div class="step" style="--c: var(--l1)"><b>1</b><strong>Copy</strong><span>Gmail can use one signature for new emails and a shorter one for replies, with just your name, title and links. Copy each in turn.</span></div>
-    <div class="step" style="--c: var(--l2)"><b>2</b><strong>Paste</strong><span>Gmail → Settings → See all settings → Signature → Create new, once for each.</span></div>
-    <div class="step" style="--c: var(--l4)"><b>3</b><strong>Choose and save</strong><span>Under Signature defaults, pick one for new emails and the other for replies, then Save Changes.</span></div>
+    <div class="step" style="--c: var(--l1)"><b>1</b><strong>Copy</strong><span>Click Copy signature. Once it's copied, you can also copy a shorter one for replies, with just your name, title and links.</span></div>
+    <div class="step" style="--c: var(--l2)"><b>2</b><strong>Paste</strong><span>Gmail → Settings → See all settings → Signature → Create new, then paste. Do the same for the short one.</span></div>
+    <div class="step" style="--c: var(--l4)"><b>3</b><strong>Choose and save</strong><span>Under Signature defaults, choose yours for new emails, and the short one for replies if you made it, then Save Changes.</span></div>
   </section>
   <footer>Made by <a href="https://shikoko.github.io/">Bogdan Roatis</a> · <a href="https://github.com/shikoko/signature">Source</a> · Your details stay in this browser.</footer>
 

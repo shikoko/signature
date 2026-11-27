@@ -108,8 +108,8 @@
     clearTimeout(status._t);
     status._t = setTimeout(() => { status.textContent = ""; }, 6000);
   }
-  // Problems that change what gets copied show on top of the toolbar, by the copy buttons,
-  // with a dot on "Copy for new emails" and a button that fixes them.
+  // Problems that change what gets copied show just above the toolbar, with a dot on
+  // "Copy signature" and a button that fixes them.
   function copyWarning() {
     if (localOnly()) return { text: "Your photo won't be in the copy: it's only on this computer.", fix: "Add a link" };
     if (st.photo && st.showPhoto && failed.has(S.cleanUrl(st.photo))) {
@@ -127,7 +127,7 @@
     } else {
       $("copyFull").removeAttribute("data-warn");
     }
-    document.documentElement.style.setProperty("--note-space", w ? note.offsetHeight + "px" : "0px");
+    document.documentElement.style.setProperty("--note-space", w ? note.offsetHeight + 8 + "px" : "0px");
   }
   function meta() {
     const ex = S.examplesInUse(st), r = S.contrast(st.accent), size = S.render(st, "export", "full").length;
@@ -587,19 +587,21 @@
       opt("Size", seg("photoSize", [["S", "Small"], ["M", "Medium"], ["L", "Large"]])) +
       '<p class="hint">To change the picture, click it on your signature.</p>'
   };
-  // Each style is drawn small from the person's own signature, fitted to its box.
+  // A small picture of a signature, fitted to its box and never larger than `max` times real
+  // size. Its links become plain text, as pictures sit inside buttons and cards.
+  function picture(box, html, max) {
+    box.innerHTML = '<div class="tin">' + html.replace(/<a /g, "<span ").replace(/<\/a>/g, "</span>") + "</div>";
+    const t = box.firstChild, w = t.offsetWidth, h = t.offsetHeight;
+    if (!w || !h) return;
+    const k = Math.min((box.clientWidth - 16) / w, (box.clientHeight - 12) / h, max);
+    t.style.transform = "scale(" + k + ")";
+    t.style.left = (box.clientWidth - w * k) / 2 + "px";
+    t.style.top = (box.clientHeight - h * k) / 2 + "px";
+  }
+  // Each style is drawn small from the person's own signature.
   function drawStyles() {
-    sheet.querySelectorAll("[data-style]").forEach((b) => {
-      const box = b.querySelector(".thumb");
-      const html = S.render(Object.assign({}, st, STYLES[+b.dataset.style][1]), "preview", "full", env).replace(/<a /g, "<span ").replace(/<\/a>/g, "</span>");
-      box.innerHTML = '<div class="tin">' + html + "</div>";
-      const t = box.firstChild, w = t.offsetWidth, h = t.offsetHeight;
-      if (!w || !h) return;
-      const k = Math.min((box.clientWidth - 16) / w, (box.clientHeight - 12) / h, 0.6);
-      t.style.transform = "scale(" + k + ")";
-      t.style.left = (box.clientWidth - w * k) / 2 + "px";
-      t.style.top = (box.clientHeight - h * k) / 2 + "px";
-    });
+    sheet.querySelectorAll("[data-style]").forEach((b) =>
+      picture(b.querySelector(".thumb"), S.render(Object.assign({}, st, STYLES[+b.dataset.style][1]), "preview", "full", env), 0.6));
   }
   function buildSheet() {
     // Rebuilding would lose the panel's scroll position and the focused button, so keep both.
@@ -672,20 +674,71 @@
   }
   $("designBtn").addEventListener("click", () => toggleSheet(sheet.hidden));
 
-  // ---------- views, copy ----------
+  // ---------- email preview ----------
   document.querySelectorAll("[data-which]").forEach((b) => b.addEventListener("click", () => { which = b.dataset.which; renderAll(); }));
 
+  // ---------- copying ----------
+  // "Copy signature" copies the full signature. A card above the toolbar then says where to paste
+  // it in Gmail and offers the shorter one for replies, which Gmail can keep as a second signature.
+  const copied = $("copied");
+  const TICK = '<svg class="i" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg>';
+  // Screen readers hear what the card shows; the page's status line is kept for problems.
+  function announce(text) {
+    const a = $("announce");
+    a.textContent = "";
+    setTimeout(() => { a.textContent = text; }, 50);
+  }
+  // Copies one version and returns notes about what's in it, or null if the browser refused.
   async function doCopy(variant) {
     tidy();
-    const ok = await S.copy(st, variant), ex = S.examplesInUse(st);
-    const what = variant === "reply" ? "Signature for replies copied" : "Signature for new emails copied";
+    if (!(await S.copy(st, variant))) {
+      closeCopied(false);
+      say("Your browser blocked copying. Try Chrome, Edge or Firefox.", true);
+      return null;
+    }
     const notes = [];
     if (variant === "full" && localOnly()) notes.push("Your photo isn't in it: it needs a link.");
-    if (ex) notes.push("It still has example details.");
-    if (!ok) say("Your browser blocked copying. Try Chrome, Edge or Firefox.", true);
-    else say(what + ". " + (notes.length ? notes.join(" ") : "Paste it into Gmail."), notes.length > 0);
+    if (S.examplesInUse(st)) notes.push("It still has example details.");
+    $("copiedNote").textContent = notes.join(" ");
+    $("copiedNote").hidden = !notes.length;
+    return notes;
   }
-  $("copyFull").addEventListener("click", () => doCopy("full"));
+  function resetShort() {
+    const b = $("copyReply");
+    clearTimeout(b._t);
+    b.classList.remove("done");
+    b.textContent = "Copy short version";
+  }
+  function closeCopied(focusCopy) {
+    if (copied.hidden) return;
+    copied.hidden = true;
+    resetShort();
+    if (focusCopy) $("copyFull").focus();
+  }
+  $("copyFull").addEventListener("click", async () => {
+    const notes = await doCopy("full");
+    if (!notes) return;
+    resetShort();
+    copied.hidden = false;
+    picture($("shortPic"), S.render(st, "preview", "reply", env), 0.6);
+    announce("Signature copied. " + (notes.length ? notes.join(" ") + " " : "") + "Paste it into Gmail: Settings, See all settings, Signature, Create new.");
+  });
+  $("copyReply").addEventListener("click", async () => {
+    const notes = await doCopy("reply"), b = $("copyReply");
+    if (!notes) return;
+    b.classList.add("done");
+    b.innerHTML = TICK + "Copied";
+    clearTimeout(b._t);
+    b._t = setTimeout(resetShort, 2500);
+    announce("Short version copied. " + (notes.length ? notes.join(" ") + " " : "") + "Add it as a second signature in Gmail.");
+  });
+  $("copiedClose").addEventListener("click", () => closeCopied(true));
+  document.addEventListener("mousedown", (e) => {
+    if (!copied.hidden && !copied.contains(e.target) && !e.target.closest("#copyFull")) closeCopied(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !copied.hidden) closeCopied(copied.contains(document.activeElement));
+  });
   $("dockFix").addEventListener("click", () => {
     const photoBtn = sig.querySelector(".photo-btn");
     if (!photoBtn) return;
@@ -693,7 +746,6 @@
     photoBtn.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
     openPhoto(photoBtn);
   });
-  $("copyReply").addEventListener("click", () => doCopy("reply"));
 
   renderAll();
 })();
