@@ -20,7 +20,7 @@
   --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
-  --dock-space: 104px; /* the bottom toolbar's height and offset, kept clear by the Layout panel */
+  --dock-space: 104px; /* the bottom toolbar's height and offset, kept clear by the Design panel */
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -63,9 +63,10 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
     radial-gradient(38% 55% at 30% 45%, rgba(255, 79, 154, .30), transparent 70%),
     radial-gradient(38% 55% at 70% 40%, rgba(143, 107, 255, .32), transparent 70%),
     radial-gradient(30% 40% at 52% 85%, rgba(31, 181, 255, .18), transparent 70%); }
-/* The work area: a toolbar above the card (a hint on the left, Add on the right), the card
-   where the signature is edited, and under it the signature at real size in an email.
-   Its width is fixed, so switching the preview between New email and Reply moves nothing. */
+/* The work area: a toolbar above the card (a hint on the left, Add on the right) and the card
+   where the signature is edited. While the Design panel is open, the signature also shows at
+   real size in an email under it, at the same fixed width, so switching the preview between
+   New email and Reply moves nothing. */
 .work { position: relative; z-index: 1; display: grid; gap: 10px; width: min(760px, 100%); min-width: 0; }
 .card-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 6px; min-height: 32px; }
 .hint { font: 500 .86rem/1.3 var(--body); color: var(--muted); min-width: 0; }
@@ -84,7 +85,7 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 .poster { padding: 46px clamp(16px, 6vw, 58px) 46px; display: grid; justify-items: start; }
 .poster-scroll { max-width: 100%; overflow-x: auto; padding: 6px; }
 @media (max-width: 600px) { .poster { padding: 30px 12px 30px; } }
-.also { display: grid; gap: 10px; justify-items: center; margin-top: 12px; }
+.also { position: relative; z-index: 1; display: grid; gap: 10px; justify-items: center; width: min(760px, 100%); min-width: 0; }
 .also-label { font: 500 .72rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .also-mail { width: 100%; background: #fff; color: #222; border-radius: 16px; box-shadow: 0 30px 70px -30px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.06); }
 .also-mail .mail-body { min-height: 0; }
@@ -115,7 +116,7 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 .mail-body .sig-slot { margin-top: 18px; }
 .mail-body .quote { color: #777; border-left: 1px solid #ccc; padding-left: 10px; margin-top: 20px; font-size: 13px; }
 
-/* ---------- Segmented controls, buttons, swatches ---------- */
+/* ---------- Segmented controls and buttons ---------- */
 .dseg, .lseg { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 2px; padding: 3px; }
 .dseg { background: var(--raised); border: 1px solid var(--line); border-radius: 10px; }
 .lseg { background: #f1f3f5; border-radius: 999px; }
@@ -138,23 +139,15 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 .ghost { border: 1px solid var(--line-strong); color: var(--text); background: transparent; }
 .ghost:hover { background: var(--raised); }
 .ghost[aria-expanded="true"] { background: var(--raised); border-color: var(--l5); }
-.swatches { display: flex; gap: 8px; align-items: center; }
-.sw { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 0; padding: 0; cursor: pointer; box-shadow: 0 0 0 2px #161920, 0 0 0 3px transparent; }
-.sw[aria-checked="true"] { box-shadow: 0 0 0 2px #161920, 0 0 0 4px var(--text); }
-.custom-color { position: relative; width: 22px; height: 22px; flex: none; border-radius: 50%; border: 1px dashed var(--muted); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
-.custom-color:hover { color: var(--text); border-color: var(--text); }
-.custom-color input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
-.custom-color svg { width: 12px; height: 12px; pointer-events: none; }
 
-/* ---------- Dock and Layout panel ---------- */
+/* ---------- Dock and Design panel ---------- */
 .dock-wrap { position: sticky; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); z-index: 12; justify-self: center; max-width: 100%; }
 .dock {
   display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 12px;
   background: rgba(22, 25, 32, .9); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  border: 1px solid var(--line-strong); border-radius: 18px; padding: 8px 8px 8px 14px;
+  border: 1px solid var(--line-strong); border-radius: 18px; padding: 8px;
   box-shadow: 0 18px 40px -16px rgba(0,0,0,.8);
 }
-.vr { width: 1px; height: 24px; background: var(--line); flex: none; }
 /* Something that changes what gets copied shows on top of the toolbar, next to the copy buttons. */
 .dock-note {
   display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap;
@@ -177,14 +170,18 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
   .dock { gap: 8px; padding: 8px; }
   .dock .copy, .dock .ghost { height: 38px; padding: 0 12px; font-size: .86rem; }
 }
-/* The Layout panel sits beside the signature, so each change shows as it's made.
-   Below 1100px it goes under the signature, and the signature stays pinned at the top. */
-.stage.panel-open { grid-template-columns: minmax(0, 1fr) 340px; column-gap: 28px; align-items: start; }
-.stage.panel-open > .work { grid-column: 1; }
-.stage.panel-open > .sheet { grid-column: 2; grid-row: 1 / span 3; position: sticky; top: 16px; max-height: calc(100vh - 16px - var(--dock-space) - var(--note-space, 0px)); }
+/* The Design panel sits beside the signature, with the email preview under the signature, so
+   each change shows as it's made. The last row takes any height the panel adds, so the preview
+   stays close under the card. Below 1100px the panel goes under the signature, which stays
+   pinned at the top, and the email preview goes under the panel. */
+.stage.panel-open { grid-template-columns: minmax(0, 1fr) 340px; grid-template-rows: auto auto 1fr; column-gap: 28px; align-items: start; }
+.stage.panel-open > .work { grid-column: 1; grid-row: 1; }
+.stage.panel-open > .also { grid-column: 1; grid-row: 2; }
+.stage.panel-open > .sheet { grid-column: 2; grid-row: 1 / 4; position: sticky; top: 16px; max-height: calc(100vh - 16px - var(--dock-space) - var(--note-space, 0px)); }
 @media (max-width: 1100px) {
-  .stage.panel-open { grid-template-columns: minmax(0, 1fr); }
-  .stage.panel-open > .sheet { grid-column: 1; grid-row: auto; position: static; width: min(560px, 100%); max-height: none; }
+  .stage.panel-open { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+  .stage.panel-open > .sheet { grid-column: 1; grid-row: 2; position: static; width: min(560px, 100%); max-height: none; }
+  .stage.panel-open > .also { grid-row: 3; }
   .stage.panel-open > .work {
     position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; padding-top: 8px;
     background: var(--page); box-shadow: 0 14px 14px -10px var(--page);
@@ -199,17 +196,56 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 .sheet h3 { margin: 0; font: 700 1.05rem/1.2 var(--display); }
 .sheet .done { display: inline-flex; align-items: center; height: 30px; padding: 0 14px; border: 0; border-radius: 9px; background: var(--text); color: var(--page); font: 600 .84rem/1 var(--body); cursor: pointer; }
 .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.tile { display: grid; gap: 6px; justify-items: center; align-content: center; font: 500 .8rem/1.2 var(--body); color: var(--muted); background: var(--raised); border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px 9px; cursor: pointer; }
-.tile svg { width: 64px; height: 38px; fill: currentColor; display: block; }
+.tile { display: flex; align-items: center; gap: 7px; height: 46px; padding: 0 9px; text-align: left; white-space: nowrap; font: 500 .8rem/1.2 var(--body); color: var(--muted); background: var(--raised); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.tile svg { width: 38px; height: 23px; flex: none; fill: currentColor; display: block; }
 .tile[aria-checked="true"] { color: var(--text); border-color: var(--l5); box-shadow: 0 0 0 1px var(--l5) inset; }
-.opts-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+/* Tabs across the top of the panel; each tab's options fit without scrolling. */
+.dtabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 3px; background: var(--raised); border: 1px solid var(--line); border-radius: 11px; }
+.dtabs button {
+  display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 4px; min-width: 0;
+  border: 0; border-radius: 8px; background: none; color: var(--muted); font: 600 .82rem/1 var(--body); white-space: nowrap; cursor: pointer;
+}
+.dtabs button:hover { color: var(--text); }
+.dtabs button[aria-selected="true"] { background: var(--line-strong); color: var(--text); }
+.tab-page { display: grid; gap: 16px; align-content: start; }
+.tab-page > .hint { margin: 0; font-size: .8rem; line-height: 1.4; color: var(--muted); }
 .opt { display: grid; gap: 7px; min-width: 0; align-content: start; justify-items: start; }
+.opt.wide { justify-items: stretch; }
 .opt > span { font: 500 .78rem/1 var(--body); color: var(--muted); }
 .opt .hint { margin: 0; font-size: .76rem; line-height: 1.4; color: var(--muted); }
-.opt .dseg img { width: 14px; height: 14px; display: block; flex: none; }
-.chip { width: 18px; height: 18px; flex: none; border-radius: 50%; background: #5b3fd6; display: inline-flex; align-items: center; justify-content: center; }
-.opt .dseg .chip img { width: 10px; height: 10px; }
-.chip svg.i { width: 11px; height: 11px; }
+/* Ready-made styles, each a small picture of the person's own signature */
+.styles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.style { display: grid; gap: 7px; padding: 5px 5px 8px; text-align: left; color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.style:hover { border-color: var(--line-strong); }
+.style[aria-checked="true"] { border-color: var(--l5); box-shadow: 0 0 0 1px var(--l5) inset; }
+.style-name { padding: 0 4px; font: 600 .8rem/1 var(--body); }
+.thumb { position: relative; display: block; height: 54px; border-radius: 8px; background: #fff; overflow: hidden; pointer-events: none; }
+.thumb .tin { position: absolute; left: 0; top: 0; width: max-content; transform-origin: 0 0; }
+/* Colour */
+.sws { display: grid; grid-template-columns: repeat(6, 32px); justify-content: space-between; row-gap: 12px; padding: 2px 4px; }
+.sw { width: 32px; height: 32px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+.sw[aria-checked="true"] { box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), 0 0 0 2px #1a1d25, 0 0 0 4px var(--text); }
+.any-colour { display: inline-flex; align-items: center; gap: 10px; height: 34px; justify-self: start; font: 500 .86rem/1 var(--body); color: var(--text); cursor: pointer; }
+.any-colour input { width: 42px; height: 30px; padding: 3px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--raised); cursor: pointer; }
+.any-colour input::-webkit-color-swatch-wrapper { padding: 0; }
+.any-colour input::-webkit-color-swatch { border: 0; border-radius: 5px; }
+.any-colour input::-moz-color-swatch { border: 0; border-radius: 5px; }
+.contrast { margin: 0; font: 500 .82rem/1.4 var(--body); color: var(--l4); }
+.contrast.bad { color: var(--l3); }
+/* Fonts, each shown with the person's name */
+.fonts { display: grid; gap: 4px; }
+.fonts button { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 40px; padding: 0 12px; text-align: left; color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.fonts button:hover { border-color: var(--line-strong); }
+.fonts button[aria-checked="true"] { border-color: var(--l5); box-shadow: 0 0 0 1px var(--l5) inset; }
+.fonts .sample { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.02rem; line-height: 1.25; }
+.fonts .fname { flex: none; font: 500 .74rem/1 var(--mono); color: var(--muted); }
+/* Icon colours, shown on white as they'll be in the signature */
+.istyles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0 2px; }
+.istyles button { display: grid; gap: 8px; justify-items: center; align-content: center; height: 74px; padding: 0 4px; color: #3b4048; background: #fff; border: 0; border-radius: 12px; font: 600 .78rem/1 var(--body); cursor: pointer; }
+.istyles button[aria-checked="true"] { box-shadow: 0 0 0 2px #1a1d25, 0 0 0 4px var(--l5); }
+.istyles svg.i { width: 22px; height: 28px; display: block; }
+.chip { width: 28px; height: 28px; flex: none; border-radius: 50%; background: #5b3fd6; display: inline-flex; align-items: center; justify-content: center; }
+.istyles .chip svg.i { width: 15px; height: 15px; }
 .order { display: grid; gap: 4px; justify-self: stretch; }
 .order div { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 36px; background: var(--raised); border-radius: 9px; padding: 0 5px 0 12px; font: 500 .88rem/1 var(--body); }
 .order span { display: inline-flex; gap: 4px; }
@@ -275,5 +311,5 @@ footer a { color: var(--text); text-underline-offset: 3px; }
 
 button:focus-visible, input:focus-visible, a:focus-visible, .lnk:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; }
 @media (prefers-reduced-motion: no-preference) {
-  .copy, .ghost, .sw, .dseg button, .lseg button, .ib, .add { transition: filter .15s, background-color .15s, box-shadow .15s, border-color .15s; }
+  .copy, .ghost, .sw, .dseg button, .lseg button, .ib, .add, .dtabs button, .style, .fonts button { transition: filter .15s, background-color .15s, box-shadow .15s, border-color .15s; }
 }

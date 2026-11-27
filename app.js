@@ -3,7 +3,6 @@
 
   const S = window.Signature, $ = (id) => document.getElementById(id);
   const KEY = "gmail-signature-builder.v3";
-  const PRESETS = ["#5b3fd6", "#c2185b", "#0a6aa1", "#087a45", "#a35400", "#374151"];
   // Version 2 opened with "Alex Rivera" and colour icons. Someone who made it their own keeps
   // their details; an untouched example is dropped, so the new example and defaults show.
   try {
@@ -54,7 +53,7 @@
   // which browsers size tables wrongly under, the edit view's pixel sizes are scaled directly.
   const scaleFor = () => {
     const w = window.innerWidth;
-    if (!sheet.hidden && w > 600) return 1.25; // the Layout panel shares the width
+    if (!sheet.hidden && w > 600) return 1.25; // the Design panel shares the width
     return w > 960 ? 1.5 : w > 600 ? 1.25 : 1;
   };
   let scale = scaleFor();
@@ -79,17 +78,14 @@
     }
     watchPhotos(sig);
   }
-  function renderAll() {
+  // `keepPanel` leaves the Design panel as it is, for changes made from inside it that it shows already.
+  function renderAll(keepPanel) {
     renderSig();
     $("addBtn").setAttribute("aria-expanded", !pop.hidden && pop.dataset.for === "add");
-    // The email preview sits under the card, except while the Layout panel is open on a narrow
-    // screen, where the pinned card and the panel need the room.
     $("alsoPreview").hidden = !alsoShown();
     if (alsoShown()) showEmail($("alsoBody"));
     document.querySelectorAll("[data-which]").forEach((b) => b.setAttribute("aria-checked", b.dataset.which === which));
-    document.querySelectorAll(".sw").forEach((b) => b.setAttribute("aria-checked", b.dataset.hex === st.accent));
-    $("customColor").value = st.accent;
-    if (!sheet.hidden) buildSheet();
+    if (!sheet.hidden && !keepPanel) buildSheet();
     meta();
   }
   function showEmail(body) {
@@ -101,7 +97,9 @@
         '<div class="sig-slot">' + html + "</div>";
     watchPhotos(body);
   }
-  const alsoShown = () => sheet.hidden || window.innerWidth > 1100;
+  // The email preview shows while the Design panel is open, so each change can be seen at real
+  // size. The rest of the time the page shows only the signature being edited.
+  const alsoShown = () => !sheet.hidden;
   const localOnly = () => !st.photo && !!st.localPhoto && st.showPhoto;
   function say(text, bad) {
     const status = $("status");
@@ -350,7 +348,7 @@
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (!pop.hidden) closePop();
-    if (!sheet.hidden && sheet.contains(document.activeElement)) { toggleSheet(false); $("layoutBtn").focus(); }
+    if (!sheet.hidden && sheet.contains(document.activeElement)) { toggleSheet(false); $("designBtn").focus(); }
   });
   window.addEventListener("resize", () => {
     if (!pop.hidden) closePop();
@@ -518,55 +516,111 @@
     if (!pop.hidden && pop.dataset.for === "add") closePop(); else openAdd(e.currentTarget);
   });
 
-  // ---------- layout panel ----------
+  // ---------- Design panel ----------
   const SCHEMA = {
     side: '<svg viewBox="0 0 64 38" aria-hidden="true"><circle cx="12" cy="19" r="8"/><rect x="25" y="9" width="1.2" height="20"/><rect x="30" y="10" width="22" height="3.4" rx="1.7"/><rect x="30" y="17" width="16" height="2.2" rx="1.1"/><rect x="30" y="23" width="28" height="2.2" rx="1.1"/></svg>',
     stacked: '<svg viewBox="0 0 64 38" aria-hidden="true"><circle cx="12" cy="9" r="6"/><rect x="6" y="19" width="24" height="3.4" rx="1.7"/><rect x="6" y="25" width="16" height="2.2" rx="1.1"/><rect x="6" y="31" width="30" height="2.2" rx="1.1"/></svg>',
     columns: '<svg viewBox="0 0 64 38" aria-hidden="true"><circle cx="9" cy="19" r="5"/><rect x="17" y="15" width="14" height="3" rx="1.5"/><rect x="17" y="20.5" width="10" height="2" rx="1"/><rect x="36" y="8" width="1.2" height="22"/><rect x="41" y="10" width="18" height="2.2" rx="1.1"/><rect x="41" y="16" width="14" height="2.2" rx="1.1"/><rect x="41" y="22" width="16" height="2.2" rx="1.1"/></svg>',
     compact: '<svg viewBox="0 0 64 38" aria-hidden="true"><rect x="6" y="14" width="18" height="3.4" rx="1.7"/><rect x="27" y="14" width="22" height="3" rx="1.5"/><rect x="6" y="21" width="30" height="2.2" rx="1.1"/></svg>'
   };
-  function seg(set, opts) {
-    const cur = set === "photoShape" ? (st.showPhoto ? st.photoShape : "none") : set === "divider" ? (st.divider ? "on" : "off") : st[set];
-    return '<div class="dseg" role="radiogroup">' + opts.map(([v, label, title]) =>
-      '<button type="button" role="radio" data-set="' + set + '" data-val="' + v + '" aria-checked="' + (cur === v) + '"' +
-      (title ? ' title="' + title + '"' : "") + ">" + label + "</button>").join("") + "</div>";
-  }
-  // The Icons option shows the same generic link icon in each style.
+  // Every colour here is at least 4.5:1 against white, so small text in it stays easy to read.
+  const COLOURS = ["#5b3fd6", "#c2185b", "#0a6aa1", "#087a45", "#a35400", "#374151", "#7c3aed", "#be123c", "#0e7490", "#15803d", "#b45309", "#111827"];
+  // Ready-made styles set the layout, font, labels and icons together. Colour and details stay.
+  const STYLES = [
+    ["Classic", { layout: "side", font: "helvetica", labels: "icons", contactAs: "lines", linksAs: "icons", iconStyle: "brand", showPhoto: true, photoShape: "circle", divider: true }],
+    ["Minimal", { layout: "compact", font: "helvetica", labels: "words", contactAs: "inline", linksAs: "words", iconStyle: "grey", showPhoto: false, divider: false }],
+    ["Editorial", { layout: "stacked", font: "georgia", labels: "words", contactAs: "lines", linksAs: "both", iconStyle: "grey", showPhoto: true, photoShape: "rounded", divider: true }],
+    ["Bold", { layout: "columns", font: "verdana", labels: "icons", contactAs: "lines", linksAs: "icons", iconStyle: "accent", showPhoto: true, photoShape: "circle", divider: true }]
+  ];
+  const TABS = [["layout", "Layout"], ["colour", "Colour"], ["text", "Text"], ["icons", "Icons"], ["photo", "Photo"]];
+  let tab = "layout";
+  const current = (set) => set === "photoShape" ? (st.showPhoto ? st.photoShape : "none") : set === "divider" ? (st.divider ? "on" : "off") : st[set];
+  const radio = (set, v, cls, inner, title) => '<button type="button"' + (cls ? ' class="' + cls + '"' : "") + ' role="radio" data-set="' + set + '" data-val="' + v + '" aria-checked="' + (current(set) === v) + '"' +
+    (title ? ' title="' + title + '"' : "") + ">" + inner + "</button>";
+  const seg = (set, opts) => '<div class="dseg" role="radiogroup">' + opts.map(([v, label, title]) => radio(set, v, "", label, title)).join("") + "</div>";
+  const opt = (label, html, wide) => '<div class="opt' + (wide ? " wide" : "") + '"><span>' + label + "</span>" + html + "</div>";
+  // The Icons tab shows the same generic link icon in each style.
   const LINK_PATHS = '<path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/>';
   const linkIcon = (stroke, defs) => '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="' + stroke +
     '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + (defs || "") + LINK_PATHS + "</svg>";
   const BRAND_SAMPLE = linkIcon("url(#iconSampleBrand)", '<defs><linearGradient id="iconSampleBrand" gradientUnits="userSpaceOnUse" x1="4" y1="4" x2="20" y2="20"><stop offset="0" stop-color="#1fb5ff"/><stop offset=".5" stop-color="#ff4f9a"/><stop offset="1" stop-color="#ffad1f"/></linearGradient></defs>');
+  function contrastNote() {
+    const r = S.contrast(st.accent), n = r.toFixed(1) + ":1";
+    return r < 4.5 ? { bad: true, text: "Too light to read easily on white (" + n + "). Try a darker colour." } : { bad: false, text: "Easy to read on white (" + n + ")." };
+  }
+  const PAGES = {
+    layout: () => {
+      const names = { tagline: "Tagline", contact: "Contact", links: "Links" };
+      return opt("Start from a style", '<div class="styles" role="radiogroup" aria-label="Styles">' + STYLES.map(([name, p], k) =>
+          '<button type="button" class="style" role="radio" data-style="' + k + '" aria-checked="' + Object.keys(p).every((x) => st[x] === p[x]) + '">' +
+          '<span class="thumb" aria-hidden="true"></span><span class="style-name">' + name + "</span></button>").join("") + "</div>", true) +
+        opt("Layout", '<div class="tiles" role="radiogroup" aria-label="Layout">' + [["side", "Side by side"], ["stacked", "Stacked"], ["columns", "Two columns"], ["compact", "Compact"]].map(([v, l]) =>
+          radio("layout", v, "tile", SCHEMA[v] + l)).join("") + "</div>", true) +
+        opt("Divider", seg("divider", [["on", "Show"], ["off", "Hide"]])) +
+        opt("Order", '<div class="order">' + st.blocks.map((b, k) =>
+          "<div>" + names[b] + "<span>" +
+          '<button type="button" class="ib" data-ord="' + k + '" data-dir="-1" aria-label="Move ' + names[b] + ' up"' + (k === 0 ? " disabled" : "") + ">" + ARROW.up + "</button>" +
+          '<button type="button" class="ib" data-ord="' + k + '" data-dir="1" aria-label="Move ' + names[b] + ' down"' + (k === st.blocks.length - 1 ? " disabled" : "") + ">" + ARROW.down + "</button>" +
+          "</span></div>").join("") + "</div>", true);
+    },
+    colour: () => {
+      const c = contrastNote();
+      return '<div class="sws" role="radiogroup" aria-label="Colour">' + COLOURS.map((hex) =>
+          '<button type="button" class="sw" role="radio" aria-label="' + hex + '" data-set="accent" data-val="' + hex + '" aria-checked="' + (st.accent.toLowerCase() === hex) + '" style="background:' + hex + '"></button>').join("") + "</div>" +
+        '<label class="any-colour"><input type="color" id="customColor" value="' + S.esc(st.accent) + '">Any colour</label>' +
+        '<p class="contrast' + (c.bad ? " bad" : "") + '" id="contrast">' + c.text + "</p>";
+    },
+    text: () => {
+      const sample = S.esc((st.name || "").trim() || "Your name");
+      return opt("Font", '<div class="fonts" role="radiogroup" aria-label="Font">' + Object.keys(S.FONTS).map((k) =>
+          radio("font", k, "", '<span class="sample" style="font-family:' + S.FONTS[k].stack + '">' + sample + '</span><span class="fname">' + S.FONTS[k].label + "</span>")).join("") + "</div>" +
+          '<p class="hint">Fonts that come with computers and phones, so people see your signature as you do.</p>', true) +
+        opt("Labels", seg("labels", [["icons", "Icons"], ["words", "Words"], ["none", "None"]])) +
+        opt("Contact", seg("contactAs", [["lines", "One per line"], ["inline", "On one line"]]));
+    },
+    icons: () => opt("Icon colours", '<div class="istyles" role="radiogroup" aria-label="Icon colours">' +
+        radio("iconStyle", "brand", "", BRAND_SAMPLE + "Brand", "Each logo in its own colours") +
+        radio("iconStyle", "grey", "", linkIcon("#8b93a3") + "Grey", "Every icon in grey") +
+        radio("iconStyle", "accent", "", '<span class="chip" style="background:' + S.esc(st.accent) + '">' + linkIcon("#fff") + "</span>Colour", "White icons on your colour") + "</div>", true) +
+      opt("Links", seg("linksAs", [["icons", "Icons"], ["words", "Words"], ["both", "Both"]])),
+    photo: () => opt("Shape", seg("photoShape", [["circle", "Circle"], ["rounded", "Rounded"], ["square", "Square"], ["none", "None"]])) +
+      opt("Size", seg("photoSize", [["S", "Small"], ["M", "Medium"], ["L", "Large"]])) +
+      '<p class="hint">To change the picture, click it on your signature.</p>'
+  };
+  // Each style is drawn small from the person's own signature, fitted to its box.
+  function drawStyles() {
+    sheet.querySelectorAll("[data-style]").forEach((b) => {
+      const box = b.querySelector(".thumb");
+      const html = S.render(Object.assign({}, st, STYLES[+b.dataset.style][1]), "preview", "full", env).replace(/<a /g, "<span ").replace(/<\/a>/g, "</span>");
+      box.innerHTML = '<div class="tin">' + html + "</div>";
+      const t = box.firstChild, w = t.offsetWidth, h = t.offsetHeight;
+      if (!w || !h) return;
+      const k = Math.min((box.clientWidth - 16) / w, (box.clientHeight - 12) / h, 0.6);
+      t.style.transform = "scale(" + k + ")";
+      t.style.left = (box.clientWidth - w * k) / 2 + "px";
+      t.style.top = (box.clientHeight - h * k) / 2 + "px";
+    });
+  }
   function buildSheet() {
-    const names = { tagline: "Tagline", contact: "Contact", links: "Links" };
     // Rebuilding would lose the panel's scroll position and the focused button, so keep both.
     const scrollTop = sheet.scrollTop, f = sheet.contains(document.activeElement) ? document.activeElement : null;
     const refocus = f && (f.dataset.set ? '[data-set="' + f.dataset.set + '"][data-val="' + f.dataset.val + '"]'
-      : f.dataset.ord != null ? '[data-ord="' + f.dataset.ord + '"][data-dir="' + f.dataset.dir + '"]' : f.id ? "#" + f.id : null);
-    sheet.innerHTML = '<div class="sheet-head"><h3>Layout</h3><button type="button" class="done" id="sheetDone">Done</button></div>' +
-      '<div class="tiles" role="radiogroup" aria-label="Layout">' + [["side", "Side by side"], ["stacked", "Stacked"], ["columns", "Two columns"], ["compact", "Compact"]].map(([v, l]) =>
-        '<button type="button" class="tile" role="radio" data-set="layout" data-val="' + v + '" aria-checked="' + (st.layout === v) + '">' + SCHEMA[v] + l + "</button>").join("") + "</div>" +
-      '<div class="opts-grid">' +
-      '<div class="opt"><span>Font</span>' + seg("font", Object.keys(S.FONTS).map((k) =>
-        [k, '<span style="font-family:' + S.FONTS[k].stack + '">' + S.FONTS[k].label + "</span>"])) +
-      '<p class="hint">Fonts that come with computers and phones, so people see your signature as you do.</p></div>' +
-      '<div class="opt"><span>Photo</span>' + seg("photoShape", [["circle", "Circle"], ["rounded", "Rounded"], ["square", "Square"], ["none", "None"]]) + "</div>" +
-      '<div class="opt"><span>Photo size</span>' + seg("photoSize", [["S", "Small"], ["M", "Medium"], ["L", "Large"]]) + "</div>" +
-      '<div class="opt"><span>Contact</span>' + seg("contactAs", [["inline", "On one line"], ["lines", "One per line"]]) + "</div>" +
-      '<div class="opt"><span>Labels</span>' + seg("labels", [["none", "None"], ["words", "Words"], ["icons", "Icons"]]) + "</div>" +
-      '<div class="opt"><span>Links</span>' + seg("linksAs", [["words", "Words"], ["icons", "Icons"], ["both", "Both"]]) + "</div>" +
-      '<div class="opt"><span>Icons</span>' + seg("iconStyle", [["brand", BRAND_SAMPLE + "Brand", "Each logo in its own colours"], ["grey", linkIcon("#8b93a3") + "Grey", "Every icon in grey"], ["accent", '<span class="chip" style="background:' + st.accent + '">' + linkIcon("#fff") + "</span>Colour", "White icons on your colour"]]) + "</div>" +
-      '<div class="opt"><span>Divider</span>' + seg("divider", [["on", "On"], ["off", "Off"]]) + "</div>" +
-      '<div class="opt"><span>Order</span><div class="order">' + st.blocks.map((b, k) =>
-        "<div>" + names[b] + "<span>" +
-        '<button type="button" class="ib" data-ord="' + k + '" data-dir="-1" aria-label="Move ' + names[b] + ' up"' + (k === 0 ? " disabled" : "") + ">" + ARROW.up + "</button>" +
-        '<button type="button" class="ib" data-ord="' + k + '" data-dir="1" aria-label="Move ' + names[b] + ' down"' + (k === st.blocks.length - 1 ? " disabled" : "") + ">" + ARROW.down + "</button>" +
-        "</span></div>").join("") + "</div></div>" +
-      "</div>";
+      : f.dataset.ord != null ? '[data-ord="' + f.dataset.ord + '"][data-dir="' + f.dataset.dir + '"]'
+      : f.dataset.style != null ? '[data-style="' + f.dataset.style + '"]' : f.dataset.tab ? '[data-tab="' + f.dataset.tab + '"]' : f.id ? "#" + f.id : null);
+    sheet.innerHTML = '<div class="sheet-head"><h3>Design</h3><button type="button" class="done" id="sheetDone">Done</button></div>' +
+      '<div class="dtabs" role="tablist" aria-label="Design">' + TABS.map(([k, l]) =>
+        '<button type="button" role="tab" id="tab-' + k + '" data-tab="' + k + '" aria-selected="' + (tab === k) + '" aria-controls="tabPage" tabindex="' + (tab === k ? 0 : -1) + '">' + l + "</button>").join("") + "</div>" +
+      '<div class="tab-page" id="tabPage" role="tabpanel" aria-labelledby="tab-' + tab + '">' + PAGES[tab]() + "</div>";
+    if (tab === "layout") drawStyles();
     sheet.querySelectorAll("[data-set]").forEach((b) => b.addEventListener("click", () => {
       const set = b.dataset.set, v = b.dataset.val;
       if (set === "photoShape") { st.showPhoto = v !== "none"; if (v !== "none") st.photoShape = v; }
       else if (set === "divider") st.divider = v === "on";
       else st[set] = v;
+      save(); renderAll();
+    }));
+    sheet.querySelectorAll("[data-style]").forEach((b) => b.addEventListener("click", () => {
+      Object.assign(st, STYLES[+b.dataset.style][1]);
       save(); renderAll();
     }));
     sheet.querySelectorAll("[data-ord]").forEach((b) => b.addEventListener("click", () => {
@@ -575,7 +629,26 @@
       st.blocks[k + d] = x;
       save(); renderAll();
     }));
-    $("sheetDone").addEventListener("click", () => { toggleSheet(false); $("layoutBtn").focus(); });
+    const showTab = (k) => { tab = k; buildSheet(); sheet.scrollTop = 0; sheet.querySelector('[data-tab="' + k + '"]').focus(); };
+    sheet.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+    sheet.querySelector(".dtabs").addEventListener("keydown", (e) => {
+      const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      const k = TABS.findIndex(([t]) => t === tab);
+      showTab(TABS[(k + d + TABS.length) % TABS.length][0]);
+    });
+    // The colour picker stays open while it's dragged, so the panel isn't rebuilt under it.
+    const custom = $("customColor");
+    if (custom) custom.addEventListener("input", (e) => {
+      st.accent = e.target.value;
+      save(); renderAll(true);
+      sheet.querySelectorAll(".sw").forEach((b) => b.setAttribute("aria-checked", b.dataset.val === st.accent.toLowerCase()));
+      const c = contrastNote(), p = $("contrast");
+      p.textContent = c.text;
+      p.classList.toggle("bad", c.bad);
+    });
+    $("sheetDone").addEventListener("click", () => { toggleSheet(false); $("designBtn").focus(); });
     sheet.scrollTop = scrollTop;
     if (refocus) {
       const n = sheet.querySelector(refocus);
@@ -583,11 +656,12 @@
     }
   }
   // The panel opens beside the signature (under it on narrower screens, with the signature
-  // pinned at the top), so each change shows on the signature as it's made.
+  // pinned at the top), so each change shows on the signature as it's made, and the email
+  // preview shows the signature at real size while it's open.
   function toggleSheet(open) {
     sheet.hidden = !open;
     stage.classList.toggle("panel-open", open);
-    $("layoutBtn").setAttribute("aria-expanded", open);
+    $("designBtn").setAttribute("aria-expanded", open);
     if (open) { closePop(); hideBar(true); }
     scale = scaleFor();
     renderAll();
@@ -596,21 +670,9 @@
       stage.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
     }
   }
-  $("layoutBtn").addEventListener("click", () => toggleSheet(sheet.hidden));
+  $("designBtn").addEventListener("click", () => toggleSheet(sheet.hidden));
 
-  // ---------- dock, views, copy ----------
-  PRESETS.forEach((hex) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "sw";
-    b.setAttribute("role", "radio");
-    b.setAttribute("aria-label", hex);
-    b.style.background = hex;
-    b.dataset.hex = hex;
-    b.addEventListener("click", () => { st.accent = hex; save(); renderAll(); });
-    $("swatches").appendChild(b);
-  });
-  $("customColor").addEventListener("input", (e) => { st.accent = e.target.value; save(); renderAll(); });
+  // ---------- views, copy ----------
   document.querySelectorAll("[data-which]").forEach((b) => b.addEventListener("click", () => { which = b.dataset.which; renderAll(); }));
 
   async function doCopy(variant) {
