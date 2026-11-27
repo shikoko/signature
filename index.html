@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gmail Signature Builder</title>
+<meta name="description" content="Make a clean Gmail signature in a minute: fill in your details, preview a full and a short reply version, and paste them straight into Gmail. Free, no sign-up, nothing leaves your browser.">
+<meta name="author" content="Bogdan Roatis">
+<link rel="canonical" href="https://shikoko.github.io/signature/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Gmail Signature Builder">
+<meta property="og:description" content="Fill in your details, preview a full and a short reply signature, and paste them straight into Gmail.">
+<meta property="og:url" content="https://shikoko.github.io/signature/">
+<meta property="og:image" content="https://shikoko.github.io/signature/assets/social-preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Gmail Signature Builder, showing an example email signature with a photo, name, job title and profile links.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f3f5f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1210" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+  <nav class="topbar" aria-label="Site">
+    <a href="https://shikoko.github.io/">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Bogdan Roatis
+    </a>
+    <a href="https://github.com/shikoko/signature">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.2a9.9 9.9 0 0 0-3.13 19.3c.5.09.68-.21.68-.48v-1.7c-2.77.6-3.35-1.18-3.35-1.18-.45-1.15-1.11-1.46-1.11-1.46-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.9.83.1-.65.35-1.08.63-1.33-2.21-.25-4.54-1.1-4.54-4.93 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.9-1.29 2.74-1.02 2.74-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.56 4.92.36.31.68.92.68 1.85v2.75c0 .27.18.58.69.48A9.9 9.9 0 0 0 12 2.2Z"/></svg>
+      Source on GitHub
+    </a>
+  </nav>
+
+  <header>
+    <h1>Gmail Signature Builder</h1>
+    <p>Fill in your details, check the preview, then copy and paste it into Gmail. You get two versions: a full one for new emails and a short one for replies. Nothing you type leaves your browser.</p>
+  </header>
+
+  <div class="example-note" id="exampleNote" hidden>
+    <p id="exampleText">These are example details. Type over them, or clear them to start fresh.</p>
+    <button type="button" class="btn-quiet" id="clearExample">Clear example details</button>
+  </div>
+
+  <div class="layout">
+    <form class="panel" id="form" autocomplete="off" novalidate>
+      <fieldset>
+        <legend>You</legend>
+        <div class="field">
+          <label for="name">Full name</label>
+          <input type="text" id="name" data-key="name" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="title">Job title</label>
+          <input type="text" id="title" data-key="title">
+        </div>
+        <div class="field">
+          <label for="company">Company <span class="opt">(optional)</span></label>
+          <input type="text" id="company" data-key="company">
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Photo</legend>
+        <div class="field">
+          <label for="photo">Photo link</label>
+          <input type="url" id="photo" data-key="photo" placeholder="https://…/photo.jpg">
+        </div>
+        <div class="inline">
+          <button type="button" class="btn-quiet" id="useGithubAvatar" disabled>Use my GitHub avatar</button>
+        </div>
+        <p class="help">Gmail can only show a photo that's online. You can use your GitHub avatar (add your GitHub below first). You can also reuse the photo from your current signature: in Gmail's signature settings, right-click it and choose <span class="ui">Copy image address</span>. A square photo works best, and Gmail shows it as a circle.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Profiles</legend>
+        <div class="field">
+          <label for="github">GitHub</label>
+          <input type="text" id="github" data-key="github" placeholder="username or github.com/username">
+        </div>
+        <div class="field">
+          <label for="linkedin">LinkedIn</label>
+          <input type="text" id="linkedin" data-key="linkedin" placeholder="linkedin.com/in/your-name">
+        </div>
+        <div class="field">
+          <label for="instagram">Instagram</label>
+          <input type="text" id="instagram" data-key="instagram" placeholder="@handle or instagram.com/handle">
+        </div>
+        <p class="help">Leave a profile empty to leave it out.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Contact <span class="opt">(optional)</span></legend>
+        <div class="row2">
+          <div class="field">
+            <label for="phone">Phone</label>
+            <input type="tel" id="phone" data-key="phone" placeholder="+44 20 7946 0958">
+          </div>
+          <div class="field">
+            <label for="website">Website</label>
+            <input type="text" id="website" data-key="website" placeholder="yourname.dev">
+          </div>
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" data-key="email" placeholder="Useful when emails get forwarded">
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Style</legend>
+        <div class="field">
+          <span class="label" id="linksLabel">Profile links</span>
+          <div class="seg" role="radiogroup" aria-labelledby="linksLabel">
+            <label><input type="radio" name="links" id="linksWords" value="words"><span>Words</span></label>
+            <label><input type="radio" name="links" id="linksLogos" value="logos"><span>Logos</span></label>
+          </div>
+          <p class="help" id="linksHelp"></p>
+        </div>
+        <div class="field">
+          <span class="label" id="accentLabel">Accent color</span>
+          <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="accentLabel"></div>
+          <span class="accent-note" id="accentNote"></span>
+        </div>
+      </fieldset>
+    </form>
+
+    <section class="previews" aria-label="Signature previews">
+      <article class="mail">
+        <div class="mail-head">
+          <div class="what">
+            <strong>New emails</strong>
+            <small>Full signature</small>
+          </div>
+          <div class="copy-wrap">
+            <span class="status" id="statusFull" aria-live="polite"></span>
+            <button type="button" class="btn-primary" id="copyFull">Copy full signature</button>
+          </div>
+        </div>
+        <div class="paper">
+          <p>Hi Ana,</p>
+          <p>The TestFlight build with the new onboarding flow is up (1.8.0, build 412). Let me know if anything looks off on your device.</p>
+          <p>Thanks,</p>
+          <div class="gap"></div>
+          <div id="previewFull"></div>
+        </div>
+      </article>
+
+      <article class="mail">
+        <div class="mail-head">
+          <div class="what">
+            <strong>Replies and forwards</strong>
+            <small>Short signature</small>
+          </div>
+          <div class="copy-wrap">
+            <span class="status" id="statusReply" aria-live="polite"></span>
+            <button type="button" class="btn-primary" id="copyReply">Copy short signature</button>
+          </div>
+        </div>
+        <div class="paper">
+          <p>Sounds good. The crash fix goes out in Monday's build.</p>
+          <div id="previewReply"></div>
+          <div class="quote">On Thu, Nov 26, 2026 at 6:04 PM Ana wrote:<br>Can we get the crash fix in before the release?</div>
+        </div>
+      </article>
+
+      <div class="checks" id="checks" aria-label="Signature checks"></div>
+      <p class="photo-note" id="photoNote"></p>
+    </section>
+  </div>
+
+  <section class="steps" aria-labelledby="stepsTitle">
+    <div class="steps-grid">
+      <div class="steps-main">
+        <h2 id="stepsTitle">Add it to Gmail</h2>
+        <ol>
+          <li>Click <span class="ui">Copy full signature</span> above.</li>
+          <li>In Gmail, click the gear icon, then <span class="ui">See all settings</span>. Stay on the <span class="ui">General</span> tab.</li>
+          <li>Scroll to <span class="ui">Signature</span>, click <span class="ui">Create new</span>, name it <span class="ui">Full</span>, click inside the box and paste (Ctrl+V, or ⌘V on a Mac). Delete your old signature here if you like.</li>
+          <li>Do the same with <span class="ui">Copy short signature</span> and name it <span class="ui">Reply</span>.</li>
+          <li>Under <span class="ui">Signature defaults</span>, set <span class="ui">For new emails use</span> to Full and <span class="ui">On reply/forward use</span> to Reply.</li>
+          <li>Tick <span class="ui">Insert signature before quoted text in replies and remove the "--" line that precedes it</span>, so your reply signature sits under your message, as in the preview.</li>
+          <li>Scroll to the bottom and click <span class="ui">Save Changes</span>.</li>
+        </ol>
+      </div>
+      <div class="why">
+        <h3>Why it's built this way</h3>
+        <p>Profile links are words by default. Outlook and many company mail servers block images, so logo icons turn into empty boxes or show up as attachments. Words always appear and are easier to tap on a phone.</p>
+        <p>Bright brand colors are often too light for small text. Android green (<code>#3DDC84</code>) measures 1.8:1 against white, and small text needs about 4.5:1 to be easy to read. The contrast check under the preview tells you when a color is too light.</p>
+        <p>Everything uses tables and inline styles in Helvetica or Arial, because Gmail removes stylesheets and web fonts from signatures.</p>
+      </div>
+    </div>
+    <details class="source">
+      <summary>HTML source, for Apple Mail, Outlook or other apps</summary>
+      <div class="src-body">
+        <div class="src-tabs">
+          <div class="seg" role="radiogroup" aria-label="Which signature">
+            <label><input type="radio" name="srcWhich" id="srcFull" value="full" checked><span>Full</span></label>
+            <label><input type="radio" name="srcWhich" id="srcReply" value="reply"><span>Short</span></label>
+          </div>
+          <button type="button" class="btn-quiet" id="copySource">Copy HTML</button>
+          <span class="status" id="statusSource" aria-live="polite"></span>
+        </div>
+        <textarea id="source" readonly spellcheck="false" aria-label="Signature HTML"></textarea>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    <p>Made by <a href="https://shikoko.github.io/">Bogdan Roatis</a>. Built with help from Claude.</p>
+    <p>Your details are saved in this browser only. <a href="https://github.com/shikoko/signature">Source on GitHub</a></p>
+  </footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
