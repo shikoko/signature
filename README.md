@@ -18,8 +18,8 @@ Make a Gmail signature by editing it in place, then paste it into Gmail.
   - **Icons:** brand colours, grey, or white on your colour; links as words, icons or both.
   - **Photo:** shape and size.
 - **See it as it will arrive.** While the Design panel is open, the signature also shows at real size in an email under the card, for new emails and for replies.
-- **Try your own photo.** Choose a picture from your computer or drop one onto the card to see how it looks. It stays in your browser and isn't copied, because Gmail needs a link to a photo that's online; until you add one, a note on top of the toolbar and a dot on "Copy for new emails" say so, with a button to add the link.
-- **Two versions, matching Gmail's two settings.** "Copy for new emails" copies the full signature; "Copy for replies" copies a shorter one with just the name, title and links, so long threads don't repeat the whole block. Both are copied as rich text, ready for Gmail's signature box.
+- **Try your own photo.** Choose a picture from your computer or drop one onto the card to see how it looks. It stays in your browser and isn't copied, because Gmail needs a link to a photo that's online; until you add one, a note just above the toolbar and a dot on "Copy signature" say so, with a button to add the link.
+- **One button to copy.** "Copy signature" copies it as rich text, ready for Gmail's signature box, then a card says where to paste it, with a link to Gmail's settings. The same card offers a shorter version for replies, with just the name, title and links, so long threads don't repeat the whole block; Gmail can keep it as a second signature and use it under "On reply/forward use".
 - **Checks as you go:** example details still in use, photo links that don't load, the accent colour's contrast against white, and Gmail's 10,000-character limit.
 - **Private.** Details are saved in the browser's `localStorage` and sent nowhere.
 

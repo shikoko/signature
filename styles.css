@@ -141,18 +141,18 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 .ghost[aria-expanded="true"] { background: var(--raised); border-color: var(--l5); }
 
 /* ---------- Dock and Design panel ---------- */
-.dock-wrap { position: sticky; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); z-index: 12; justify-self: center; max-width: 100%; }
+.dock-wrap { position: sticky; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); z-index: 12; justify-self: center; max-width: 100%; display: grid; justify-items: center; }
 .dock {
   display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 12px;
   background: rgba(22, 25, 32, .9); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   border: 1px solid var(--line-strong); border-radius: 18px; padding: 8px;
   box-shadow: 0 18px 40px -16px rgba(0,0,0,.8);
 }
-/* Something that changes what gets copied shows on top of the toolbar, next to the copy buttons. */
+/* Something that changes what gets copied shows just above the toolbar, by the copy button. */
 .dock-note {
   display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap;
-  margin: 0 18px; padding: 8px 8px 8px 14px; border: 1px solid rgba(255, 173, 31, .45); border-bottom: 0;
-  border-radius: 14px 14px 0 0; background: #30240e; color: #ffd99a; font: 500 .84rem/1.35 var(--body);
+  margin: 0 0 8px; padding: 8px 8px 8px 14px; border: 1px solid rgba(255, 173, 31, .45);
+  border-radius: 14px; background: #30240e; color: #ffd99a; font: 500 .84rem/1.35 var(--body);
 }
 .dock-note > span { display: inline-flex; align-items: center; gap: 8px; }
 .dock-note svg { width: 15px; height: 15px; flex: none; color: var(--l3); }
@@ -166,6 +166,42 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
   content: ""; position: absolute; top: -5px; right: -5px; width: 14px; height: 14px;
   border-radius: 50%; background: var(--l3); border: 2px solid #161920;
 }
+/* After copying: where to paste it in Gmail, and the shorter version for replies */
+.copied {
+  position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%);
+  width: min(440px, calc(100vw - 24px)); display: grid; gap: 12px; padding: 14px;
+  background: #1d212a; color: var(--text); border: 1px solid var(--line-strong); border-radius: 16px; box-shadow: 0 22px 50px -16px rgba(0,0,0,.85);
+}
+.copied-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.copied-head strong { display: inline-flex; align-items: center; gap: 8px; font: 600 .95rem/1.2 var(--body); }
+.copied .ok { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex: none; border-radius: 50%; background: var(--l4); color: #06281a; }
+.copied .ok svg { width: 12px; height: 12px; }
+.copied .x { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: none; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; }
+.copied .x:hover { background: var(--line-strong); color: var(--text); }
+.copied .x svg { width: 14px; height: 14px; }
+.copied-note { margin: 0; font: 500 .84rem/1.4 var(--body); color: var(--l3); }
+.copied .path { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font: 500 .86rem/1.4 var(--body); }
+.copied .path i { font-style: normal; color: var(--muted); }
+.copied .gm { justify-self: start; display: inline-flex; align-items: center; gap: 6px; height: 30px; font: 600 .86rem/1 var(--body); color: var(--l1); text-decoration: none; }
+.copied .gm:hover { text-decoration: underline; text-underline-offset: 3px; }
+.copied .gm svg { width: 12px; height: 12px; }
+.copied .short { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 10px 12px; align-items: center; padding-top: 12px; border-top: 1px solid var(--line); }
+.copied .mini { position: relative; display: block; height: 58px; border-radius: 8px; background: #fff; overflow: hidden; }
+.copied .txt { display: grid; gap: 3px; font-size: .84rem; line-height: 1.4; color: var(--muted); }
+.copied .txt strong { font-weight: 600; font-size: .88rem; color: var(--text); }
+.copied .gbtn {
+  grid-column: 2; justify-self: start; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--raised);
+  color: var(--text); font: 600 .84rem/1 var(--body); white-space: nowrap; cursor: pointer;
+}
+.copied .gbtn:hover { border-color: var(--l5); }
+.copied .gbtn.done { border-color: var(--l4); color: var(--l4); }
+.copied .gbtn svg { width: 13px; height: 13px; }
+@media (max-width: 480px) {
+  .copied .short { grid-template-columns: minmax(0, 1fr); }
+  .copied .gbtn { grid-column: 1; }
+}
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 @media (max-width: 600px) {
   .dock { gap: 8px; padding: 8px; }
   .dock .copy, .dock .ghost { height: 38px; padding: 0 12px; font-size: .86rem; }
@@ -220,7 +256,7 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 .style[aria-checked="true"] { border-color: var(--l5); box-shadow: 0 0 0 1px var(--l5) inset; }
 .style-name { padding: 0 4px; font: 600 .8rem/1 var(--body); }
 .thumb { position: relative; display: block; height: 54px; border-radius: 8px; background: #fff; overflow: hidden; pointer-events: none; }
-.thumb .tin { position: absolute; left: 0; top: 0; width: max-content; transform-origin: 0 0; }
+.thumb .tin, .mini .tin { position: absolute; left: 0; top: 0; width: max-content; transform-origin: 0 0; }
 /* Colour */
 .sws { display: grid; grid-template-columns: repeat(6, 32px); justify-content: space-between; row-gap: 12px; padding: 2px 4px; }
 .sw { width: 32px; height: 32px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
