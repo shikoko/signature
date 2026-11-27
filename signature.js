@@ -38,7 +38,7 @@ window.Signature = (function () {
   const EXAMPLE = {
     name: "Jane Doe", pronouns: "", title: "Android Engineer", company: "Northwind Apps", tagline: "", disclaimer: "",
     show: { pronouns: false, company: true, tagline: false, disclaimer: false },
-    photo: EXAMPLE_PHOTO,
+    photo: EXAMPLE_PHOTO, localPhoto: "",
     items: [
       { id: "ex1", type: "phone", value: "+44 20 7946 0958", label: "Mobile" },
       { id: "ex2", type: "website", value: "example.com", label: "Web" },
@@ -217,15 +217,18 @@ window.Signature = (function () {
         return st.photo ? '<img src="' + esc(cleanUrl(st.photo)) + '" width="' + s + '" height="' + s + '" alt="' + esc(st.name) +
           '" style="display:block;width:' + s + "px;height:" + s + "px;border-radius:" + r + 'px;border:0;">' : "";
       }
-      if (!st.photo && !edit) return "";
-      const src = st.photo && !(env.failed && env.failed.has(cleanUrl(st.photo))) ? photoSrc(st) : "";
+      // A photo chosen from the computer (st.localPhoto, a data: URL kept in this browser) is shown
+      // here so people can see how it looks, but never copied: Gmail needs a link to an online image.
+      const local = !st.photo && /^data:image\//.test(st.localPhoto || "") ? st.localPhoto : "";
+      if (!st.photo && !local && !edit) return "";
+      const src = local || (st.photo && !(env.failed && env.failed.has(cleanUrl(st.photo))) ? photoSrc(st) : "");
       const inner = src
-        ? '<img data-photo="' + esc(cleanUrl(st.photo)) + '" src="' + esc(src) + '" alt="" style="display:block;width:' + s + "px;height:" + s + "px;border-radius:" + r + 'px;object-fit:cover;">'
+        ? "<img" + (local ? "" : ' data-photo="' + esc(cleanUrl(st.photo)) + '"') + ' src="' + esc(src) + '" alt="" style="display:block;width:' + s + "px;height:" + s + "px;border-radius:" + r + 'px;object-fit:cover;">'
         : '<span style="display:block;width:100%;text-align:center;line-height:1;">' + esc(initials(st.name)) + "</span>";
       const base = "box-sizing:border-box;width:" + s + "px;height:" + s + "px;border-radius:" + r + "px;background:" + tint(acc, 0.9) + ";color:" + acc +
         ";font:bold " + Math.round(s * 0.3) + "px " + FONT + ";display:flex;align-items:center;justify-content:center;overflow:hidden;" +
-        (st.photo ? "" : "border:1.5px dashed " + acc + ";");
-      if (edit) return '<button type="button" class="photo-btn" aria-label="Change photo" style="' + base + 'padding:0;cursor:pointer;">' + inner + "</button>";
+        (st.photo || local ? "" : "border:1.5px dashed " + acc + ";");
+      if (edit) return '<button type="button" class="photo-btn" aria-label="Change photo" title="Click to change the photo, or drop a picture onto the card" style="' + base + 'padding:0;cursor:pointer;">' + inner + "</button>";
       return '<div style="' + base + '">' + inner + "</div>";
     }
 

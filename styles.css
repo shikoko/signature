@@ -57,31 +57,39 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 .how-line i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); flex: none; }
 
 /* ---------- Stage and poster ---------- */
-.stage { position: relative; display: grid; justify-items: center; gap: 22px; padding-top: 22px; }
+.stage { position: relative; display: grid; justify-items: center; gap: 22px; padding-top: 40px; }
 .glow { position: absolute; inset: -20px 0 auto; height: 500px; pointer-events: none; z-index: 0; filter: blur(28px);
   background:
     radial-gradient(38% 55% at 30% 45%, rgba(255, 79, 154, .30), transparent 70%),
     radial-gradient(38% 55% at 70% 40%, rgba(143, 107, 255, .32), transparent 70%),
     radial-gradient(30% 40% at 52% 85%, rgba(31, 181, 255, .18), transparent 70%); }
-.poster {
+/* The card holds the editable signature or the email preview. Edit | Email preview sits on its
+   top edge and Add on its bottom edge: both belong to the card without covering the signature. */
+.card {
   position: relative; z-index: 1; background: #fff; color: #222; border-radius: 24px;
-  padding: 54px clamp(16px, 6vw, 58px) 62px; max-width: 100%; min-width: min(560px, 100%);
+  max-width: 100%; min-width: min(560px, 100%); margin-bottom: 18px;
   box-shadow: 0 40px 90px -30px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.06);
-  display: grid; justify-items: start;
 }
+.card.is-email { width: min(760px, 100%); }
+.card.drop-photo { box-shadow: 0 0 0 3px var(--l5), 0 40px 90px -30px rgba(0,0,0,.85); }
+.mode-switch { position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); z-index: 3; box-shadow: 0 10px 24px -10px rgba(0,0,0,.8); }
+.poster { padding: 54px clamp(16px, 6vw, 58px) 50px; display: grid; justify-items: start; }
 .poster-scroll { max-width: 100%; overflow-x: auto; padding: 6px; }
-@media (max-width: 600px) { .poster { padding: 48px 12px 56px; } }
+@media (max-width: 600px) { .poster { padding: 44px 12px 42px; } }
 .tip {
-  position: absolute; top: 16px; right: 18px; display: inline-flex; align-items: center; height: 26px; padding: 0 11px;
+  position: absolute; top: 28px; right: 18px; display: inline-flex; align-items: center; height: 26px; padding: 0 11px;
   font: 600 12px/1 var(--body); color: #fff; background: linear-gradient(90deg, var(--l2), var(--l5));
   border-radius: 999px; box-shadow: 0 6px 18px -6px rgba(143,107,255,.7); pointer-events: none;
 }
+@media (max-width: 600px) { .tip { display: none; } }
 .add {
-  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
-  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 16px 0 13px;
-  font: 600 .85rem/1 var(--body); color: #4b3fb8; background: var(--edit-soft); border: 1px dashed #b9a8ff; border-radius: 999px; cursor: pointer;
+  position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 50%); z-index: 3;
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 17px 0 14px;
+  font: 600 .88rem/1 var(--body); color: var(--text); background: #1d212a; border: 1px solid var(--line-strong); border-radius: 999px; cursor: pointer;
+  box-shadow: 0 10px 24px -10px rgba(0,0,0,.8);
 }
-.add:hover { background: #ebe5ff; }
+.add svg { color: var(--l5); }
+.add:hover, .add[aria-expanded="true"] { background: var(--raised); border-color: var(--l5); }
 
 /* Editable parts of the signature */
 .sig td { white-space: nowrap; }
@@ -103,9 +111,7 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 .sig .drop-before:not(tr) { box-shadow: inset 2px 0 0 var(--l5); }
 .sig .drop-after:not(tr) { box-shadow: inset -2px 0 0 var(--l5); }
 
-.view-switch { position: relative; z-index: 1; }
-.mail { position: relative; z-index: 1; width: min(760px, 100%); background: #fff; color: #222; border-radius: 16px; box-shadow: 0 30px 80px -30px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.06); }
-.mail-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px 10px 22px; border-bottom: 1px solid #eceef1; font: 500 .8rem/1 var(--body); color: #6b7280; }
+.mail-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 30px 14px 12px 22px; border-bottom: 1px solid #eceef1; font: 500 .8rem/1 var(--body); color: #6b7280; }
 .mail-body { padding: 26px clamp(18px, 5vw, 36px) 34px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; overflow-x: auto; min-height: 260px; }
 .mail-body p { margin: 0 0 12px; }
 .mail-body .sig-slot { margin-top: 18px; }
@@ -158,12 +164,12 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 /* The Layout panel sits beside the signature, so each change shows as it's made.
    Below 1100px it goes under the signature, and the signature stays pinned at the top. */
 .stage.panel-open { grid-template-columns: minmax(0, 1fr) 340px; column-gap: 28px; align-items: start; }
-.stage.panel-open > .poster, .stage.panel-open > .mail, .stage.panel-open > .view-switch { grid-column: 1; }
+.stage.panel-open > .card { grid-column: 1; }
 .stage.panel-open > .sheet { grid-column: 2; grid-row: 1 / span 3; position: sticky; top: 16px; max-height: calc(100vh - 16px - var(--dock-space)); }
 @media (max-width: 1100px) {
   .stage.panel-open { grid-template-columns: minmax(0, 1fr); }
   .stage.panel-open > .sheet { grid-column: 1; grid-row: auto; position: static; width: min(560px, 100%); max-height: none; }
-  .stage.panel-open > .poster, .stage.panel-open > .mail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 5; }
+  .stage.panel-open > .card { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 26px); z-index: 5; }
 }
 .sheet {
   position: relative; z-index: 2; width: 100%; max-height: calc(100vh - 32px); overflow: auto;
@@ -183,6 +189,7 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 .opt .dseg img { width: 14px; height: 14px; display: block; flex: none; }
 .chip { width: 18px; height: 18px; flex: none; border-radius: 50%; background: #5b3fd6; display: inline-flex; align-items: center; justify-content: center; }
 .opt .dseg .chip img { width: 10px; height: 10px; }
+.chip svg.i { width: 11px; height: 11px; }
 .order { display: grid; gap: 4px; justify-self: stretch; }
 .order div { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 36px; background: var(--raised); border-radius: 9px; padding: 0 5px 0 12px; font: 500 .88rem/1 var(--body); }
 .order span { display: inline-flex; gap: 4px; }
@@ -209,6 +216,7 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 
 /* ---------- Pop-ups ---------- */
 .pop { position: absolute; z-index: 20; width: min(380px, calc(100% - 32px)); background: #1d212a; color: var(--text); border: 1px solid var(--line-strong); border-radius: 14px; padding: 14px; box-shadow: 0 22px 50px -16px rgba(0,0,0,.85); display: grid; gap: 10px; }
+.pop.wide { width: min(540px, calc(100% - 32px)); }
 .pop h3 { margin: 0; display: flex; align-items: center; gap: 8px; font: 600 .95rem/1.2 var(--body); }
 .pop h3 img { width: 16px; height: 16px; display: block; }
 .pop .grp { font: 500 .7rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }

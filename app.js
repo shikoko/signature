@@ -84,6 +84,9 @@
     $("tip").hidden = !!st.edited;
     $("poster").hidden = mode !== "edit";
     $("mailView").hidden = mode !== "email";
+    $("card").classList.toggle("is-email", mode === "email");
+    $("addBtn").hidden = mode !== "edit";
+    $("addBtn").setAttribute("aria-expanded", !pop.hidden && pop.dataset.for === "add");
     if (mode === "email") {
       const html = S.render(st, "preview", which, env);
       $("mailBody").innerHTML = which === "reply"
@@ -100,11 +103,20 @@
     if (!sheet.hidden) buildSheet();
     meta();
   }
+  const localOnly = () => !st.photo && !!st.localPhoto && st.showPhoto;
+  function say(text, bad) {
+    const status = $("status");
+    status.textContent = text;
+    status.classList.toggle("bad", !!bad);
+    clearTimeout(status._t);
+    status._t = setTimeout(() => { status.textContent = ""; }, 6000);
+  }
   function meta() {
     const ex = S.examplesInUse(st), r = S.contrast(st.accent), size = S.render(st, "export", "full").length;
     const parts = [];
     if (ex) parts.push('<span>Example details: <button type="button" id="clear">clear them</button></span>');
     if (st.photo && st.showPhoto && failed.has(S.cleanUrl(st.photo))) parts.push('<span class="bad">Photo link didn\'t load</span>');
+    if (localOnly()) parts.push('<span class="bad">Your photo is only on this computer: add a link to copy it</span>');
     parts.push('<span class="' + (r < 4.5 ? "bad" : "") + '">' + r.toFixed(1) + ":1 contrast" + (r < 4.5 ? ", too light" : "") + "</span>");
     parts.push('<span class="' + (size > S.LIMIT ? "bad" : "") + '">' + size.toLocaleString("en-GB") + " / " + S.LIMIT.toLocaleString("en-GB") + " characters</span>");
     $("meta").innerHTML = parts.join("");
@@ -287,18 +299,26 @@
   document.addEventListener("dragend", endDrag);
 
   // ---------- pop-ups ----------
-  // Opens under the anchor, or above it when asked and there's room on screen.
-  function placePop(anchor, preferAbove) {
+  // Opens under the anchor unless there's more room above it; the bottom toolbar counts as no room.
+  // With `below`, it always opens under the anchor and the page scrolls just enough to show it.
+  function placePop(anchor, preferAbove, below) {
     pop.hidden = false;
     const pr = page.getBoundingClientRect(), r = anchor.getBoundingClientRect(), h = pop.offsetHeight;
-    const above = preferAbove && r.top - h - 10 >= 8;
+    const roomBelow = window.innerHeight - 110 - r.bottom, roomAbove = r.top - 8;
+    const above = !below && (preferAbove ? roomAbove >= h + 10 || roomAbove > roomBelow : roomBelow < h + 10 && roomAbove > roomBelow);
     pop.style.left = Math.max(12, Math.min(r.left - pr.left + r.width / 2 - pop.offsetWidth / 2, pr.width - pop.offsetWidth - 12)) + "px";
     pop.style.top = Math.max(8, above ? r.top - pr.top - h - 10 : r.bottom - pr.top + 10) + "px";
+    const hidden = pop.getBoundingClientRect().bottom - (window.innerHeight - 110);
+    if (below && hidden > 0) {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollBy({ top: Math.min(hidden + 8, r.top - 8), behavior: reduce ? "auto" : "smooth" });
+    }
   }
   function closePop() {
     if (pop.hidden) return;
     const id = pop.dataset.for;
     pop.hidden = true;
+    pop.classList.remove("wide");
     pop.dataset.for = "";
     const i = id && item(id);
     if (i && groupOf(i) === "links" && !(i.value || "").trim()) { st.items = st.items.filter((x) => x !== i); save(); }
@@ -323,6 +343,7 @@
     const sib = st.items.filter((x) => groupOf(x) === "links"), k = sib.indexOf(i);
     hideBar(true);
     pop.dataset.for = id;
+    pop.classList.remove("wide");
     pop.innerHTML = '<h3><img src="' + uiIcon(i.type) + '" alt="">' + S.esc(t.label) + "</h3>" +
       '<label>Link<input id="pv" autocomplete="off" placeholder="' + S.esc(t.ph) + '"></label>' +
       '<label>Shown as<input id="pt" autocomplete="off" placeholder="' + S.esc(t.label) + '"></label>' +
@@ -353,24 +374,87 @@
     $("pv").focus();
   }
 
+  const PHOTO_NOTE = {
+    link: "A square image works best. It has to be online, so paste a link to it. To reuse your current photo, right-click it in Gmail's signature settings and choose Copy image address.",
+    local: "This photo is only on this computer. It shows here so you can see how it looks, but Gmail needs a link to a photo that's online, so it isn't copied. Paste a link above to include it."
+  };
   function openPhoto(anchor) {
     const gh = S.githubHandle(st);
     hideBar(true);
     pop.dataset.for = "photo";
+    pop.classList.remove("wide");
     pop.innerHTML = "<h3>Photo</h3>" +
       '<label>Photo link<input id="pp" autocomplete="off" placeholder="https://…/photo.jpg"></label>' +
-      '<p class="note">A square image works best. It has to be online, so paste a link to it. To reuse your current photo, right-click it in Gmail\'s signature settings and choose Copy image address.</p>' +
-      '<div class="row"><span>' + (gh ? '<button type="button" class="link" id="pgh">Use my GitHub avatar (@' + S.esc(gh) + ")</button>" : "") + "</span>" +
-      '<span><button type="button" class="link rm" id="prm">Remove</button><button type="button" class="done" id="pd">Done</button></span></div>';
+      '<div class="row"><span><button type="button" class="link" id="pfile">Choose from this computer</button>' +
+      (gh ? '<button type="button" class="link" id="pgh">Use my GitHub avatar</button>' : "") + "</span></div>" +
+      '<input type="file" id="pfileInput" accept="image/*" hidden>' +
+      '<p class="note" id="pnote"></p>' +
+      '<div class="row"><span></span><span><button type="button" class="link rm" id="prm">Remove</button><button type="button" class="done" id="pd">Done</button></span></div>';
+    const note = () => { $("pnote").textContent = localOnly() ? PHOTO_NOTE.local : PHOTO_NOTE.link; };
+    note();
     $("pp").value = st.photo || "";
-    $("pp").addEventListener("input", (e) => { st.photo = e.target.value.trim(); save(); meta(); });
+    $("pp").addEventListener("input", (e) => {
+      st.photo = e.target.value.trim();
+      if (st.photo) st.localPhoto = "";
+      save(); note(); meta();
+    });
     $("pp").addEventListener("keydown", (e) => { if (e.key === "Enter") closePop(); });
-    if (gh) $("pgh").addEventListener("click", () => { st.photo = "https://github.com/" + gh + ".png?size=200"; $("pp").value = st.photo; save(); meta(); });
-    $("prm").addEventListener("click", () => { st.photo = ""; save(); closePop(); });
+    $("pfile").addEventListener("click", () => $("pfileInput").click());
+    $("pfileInput").addEventListener("change", (e) => {
+      if (e.target.files[0]) useLocalPhoto(e.target.files[0], () => { $("pp").value = ""; note(); });
+    });
+    if (gh) $("pgh").addEventListener("click", () => {
+      st.photo = "https://github.com/" + gh + ".png?size=200";
+      st.localPhoto = "";
+      $("pp").value = st.photo;
+      save(); note(); meta();
+    });
+    $("prm").addEventListener("click", () => { st.photo = ""; st.localPhoto = ""; save(); closePop(); });
     $("pd").addEventListener("click", closePop);
     placePop(anchor);
     $("pp").focus();
   }
+
+  // A picture from this computer is cropped square, shrunk to 192 px and kept in this browser
+  // only. It's shown in the editor and the email preview but never copied.
+  function useLocalPhoto(file, done) {
+    if (!file || !/^image\//.test(file.type)) { say("That file isn't a picture. Choose a JPEG, PNG, GIF or WebP image.", true); return; }
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const size = 192, side = Math.min(img.naturalWidth, img.naturalHeight), canvas = document.createElement("canvas");
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      st.localPhoto = canvas.toDataURL("image/jpeg", 0.86);
+      st.photo = "";
+      st.showPhoto = true;
+      save(); renderAll();
+      if (done) done();
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); say("That picture couldn't be opened. Try a JPEG or PNG.", true); };
+    img.src = url;
+  }
+  // Dropping a picture anywhere on the card uses it as the photo.
+  const card = $("card");
+  const hasFiles = (e) => !!e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files");
+  card.addEventListener("dragover", (e) => {
+    if (!hasFiles(e) || mode !== "edit") return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    card.classList.add("drop-photo");
+  });
+  card.addEventListener("dragleave", (e) => { if (!card.contains(e.relatedTarget)) card.classList.remove("drop-photo"); });
+  card.addEventListener("drop", (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    card.classList.remove("drop-photo");
+    if (mode === "edit") useLocalPhoto(e.dataTransfer.files[0]);
+  });
+  // A file dropped anywhere else would otherwise replace this page.
+  ["dragover", "drop"].forEach((type) => document.addEventListener(type, (e) => { if (hasFiles(e)) e.preventDefault(); }));
 
   const ADD_GROUPS = [
     ["Contact", ["phone", "email", "website", "address"]],
@@ -381,6 +465,7 @@
     const extras = Object.keys(S.OPTIONAL).filter((k) => !S.shown(st, k));
     hideBar(true);
     pop.dataset.for = "add";
+    pop.classList.add("wide");
     pop.innerHTML = "<h3>Add to your signature</h3>" + ADD_GROUPS.map(([g, types]) =>
       '<div class="grp">' + g + '</div><div class="opts">' + types.map((t) =>
         '<button type="button" data-add="' + t + '"><img src="' + uiIcon(t) + '" alt="">' + S.esc(S.TYPES[t].label) + "</button>").join("") + "</div>").join("") +
@@ -393,7 +478,8 @@
       const el = sig.querySelector('[data-key="' + b.dataset.optAdd + '"]');
       if (el) el.focus();
     }));
-    placePop(anchor, true);
+    placePop(anchor, false, true);
+    $("addBtn").setAttribute("aria-expanded", "true");
   }
   function addItem(type) {
     const t = S.TYPES[type], it = { id: S.uid(), type: type, value: "" };
@@ -421,11 +507,16 @@
   };
   function seg(set, opts) {
     const cur = set === "photoShape" ? (st.showPhoto ? st.photoShape : "none") : set === "divider" ? (st.divider ? "on" : "off") : st[set];
-    return '<div class="dseg" role="radiogroup">' + opts.map(([v, label]) =>
-      '<button type="button" role="radio" data-set="' + set + '" data-val="' + v + '" aria-checked="' + (cur === v) + '">' + label + "</button>").join("") + "</div>";
+    return '<div class="dseg" role="radiogroup">' + opts.map(([v, label, title]) =>
+      '<button type="button" role="radio" data-set="' + set + '" data-val="' + v + '" aria-checked="' + (cur === v) + '"' +
+      (title ? ' title="' + title + '"' : "") + ">" + label + "</button>").join("") + "</div>";
   }
+  // The Icons option shows the same generic link icon in each style.
+  const LINK_PATHS = '<path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/>';
+  const linkIcon = (stroke, defs) => '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="' + stroke +
+    '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + (defs || "") + LINK_PATHS + "</svg>";
+  const BRAND_SAMPLE = linkIcon("url(#iconSampleBrand)", '<defs><linearGradient id="iconSampleBrand" gradientUnits="userSpaceOnUse" x1="4" y1="4" x2="20" y2="20"><stop offset="0" stop-color="#1fb5ff"/><stop offset=".5" stop-color="#ff4f9a"/><stop offset="1" stop-color="#ffad1f"/></linearGradient></defs>');
   function buildSheet() {
-    const ic = (set, t) => '<img src="' + S.iconPath(set, t) + '" alt="">';
     const names = { tagline: "Tagline", contact: "Contact", links: "Links" };
     // Rebuilding would lose the panel's scroll position and the focused button, so keep both.
     const scrollTop = sheet.scrollTop, f = sheet.contains(document.activeElement) ? document.activeElement : null;
@@ -440,7 +531,7 @@
       '<div class="opt"><span>Contact</span>' + seg("contactAs", [["inline", "On one line"], ["lines", "One per line"]]) + "</div>" +
       '<div class="opt"><span>Labels</span>' + seg("labels", [["none", "None"], ["words", "Words"], ["icons", "Icons"]]) + "</div>" +
       '<div class="opt"><span>Links</span>' + seg("linksAs", [["words", "Words"], ["icons", "Icons"], ["both", "Both"]]) + "</div>" +
-      '<div class="opt"><span>Icons</span>' + seg("iconStyle", [["brand", ic("brand", "instagram") + "Brand"], ["grey", ic("grey", "github") + "Grey"], ["accent", '<span class="chip">' + ic("white", "github") + "</span>Colour"]]) + "</div>" +
+      '<div class="opt"><span>Icons</span>' + seg("iconStyle", [["brand", BRAND_SAMPLE + "Brand", "Each logo in its own colours"], ["grey", linkIcon("#8b93a3") + "Grey", "Every icon in grey"], ["accent", '<span class="chip" style="background:' + st.accent + '">' + linkIcon("#fff") + "</span>Colour", "White icons on your colour"]]) + "</div>" +
       '<div class="opt"><span>Divider</span>' + seg("divider", [["on", "On"], ["off", "Off"]]) + "</div>" +
       '<div class="opt"><span>Order</span><div class="order">' + st.blocks.map((b, k) =>
         "<div>" + names[b] + "<span>" +
@@ -501,13 +592,13 @@
 
   async function doCopy(variant) {
     tidy();
-    const ok = await S.copy(st, variant), ex = S.examplesInUse(st), status = $("status");
+    const ok = await S.copy(st, variant), ex = S.examplesInUse(st);
     const what = variant === "reply" ? "Signature for replies copied" : "Signature for new emails copied";
-    status.textContent = !ok ? "Your browser blocked copying. Try Chrome, Edge or Firefox."
-      : ex ? what + ", with example details still in it." : what + ". Paste it into Gmail.";
-    status.classList.toggle("bad", !ok || ex > 0);
-    clearTimeout(status._t);
-    status._t = setTimeout(() => { status.textContent = ""; }, 6000);
+    const notes = [];
+    if (variant === "full" && localOnly()) notes.push("Your photo isn't in it: it needs a link.");
+    if (ex) notes.push("It still has example details.");
+    if (!ok) say("Your browser blocked copying. Try Chrome, Edge or Firefox.", true);
+    else say(what + ". " + (notes.length ? notes.join(" ") : "Paste it into Gmail."), notes.length > 0);
   }
   $("copyFull").addEventListener("click", () => doCopy("full"));
   $("copyReply").addEventListener("click", () => doCopy("reply"));
