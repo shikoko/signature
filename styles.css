@@ -231,10 +231,6 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .sheet h3 { margin: 0; font: 700 1.05rem/1.2 var(--display); }
 .sheet .done { display: inline-flex; align-items: center; height: 30px; padding: 0 14px; border: 0; border-radius: 9px; background: var(--text); color: var(--page); font: 600 .84rem/1 var(--body); cursor: pointer; }
-.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.tile { display: flex; align-items: center; gap: 7px; height: 46px; padding: 0 9px; text-align: left; white-space: nowrap; font: 500 .8rem/1.2 var(--body); color: var(--muted); background: var(--raised); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
-.tile svg { width: 38px; height: 23px; flex: none; fill: currentColor; display: block; }
-.tile[aria-checked="true"] { color: var(--text); border-color: var(--l5); box-shadow: 0 0 0 1px var(--l5) inset; }
 /* Tabs across the top of the panel; each tab's options fit without scrolling. */
 .dtabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 3px; background: var(--raised); border: 1px solid var(--line); border-radius: 11px; }
 .dtabs button {
@@ -249,13 +245,13 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 .opt.wide { justify-items: stretch; }
 .opt > span { font: 500 .78rem/1 var(--body); color: var(--muted); }
 .opt .hint { margin: 0; font-size: .76rem; line-height: 1.4; color: var(--muted); }
-/* Ready-made styles, each a small picture of the person's own signature */
-.styles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.style { display: grid; gap: 7px; padding: 5px 5px 8px; text-align: left; color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
-.style:hover { border-color: var(--line-strong); }
-.style[aria-checked="true"] { border-color: var(--l5); box-shadow: 0 0 0 1px var(--l5) inset; }
-.style-name { padding: 0 4px; font: 600 .8rem/1 var(--body); }
-.thumb { position: relative; display: block; height: 54px; border-radius: 8px; background: #fff; overflow: hidden; pointer-events: none; }
+/* The four layouts, each a small picture of the person's own signature */
+.layout-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.layout-pick { display: grid; gap: 7px; padding: 5px 5px 8px; text-align: left; color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.layout-pick:hover { border-color: var(--line-strong); }
+.layout-pick[aria-checked="true"] { border-color: var(--l5); box-shadow: 0 0 0 1px var(--l5) inset; }
+.layout-name { padding: 0 4px; font: 600 .8rem/1 var(--body); }
+.thumb { position: relative; display: block; height: 64px; border-radius: 8px; background: #fff; overflow: hidden; pointer-events: none; }
 .thumb .tin, .mini .tin { position: absolute; left: 0; top: 0; width: max-content; transform-origin: 0 0; }
 /* Colour */
 .sws { display: grid; grid-template-columns: repeat(6, 32px); justify-content: space-between; row-gap: 12px; padding: 2px 4px; }
@@ -347,5 +343,5 @@ footer a { color: var(--text); text-underline-offset: 3px; }
 
 button:focus-visible, input:focus-visible, a:focus-visible, .lnk:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; }
 @media (prefers-reduced-motion: no-preference) {
-  .copy, .ghost, .sw, .dseg button, .lseg button, .ib, .add, .dtabs button, .style, .fonts button { transition: filter .15s, background-color .15s, box-shadow .15s, border-color .15s; }
+  .copy, .ghost, .sw, .dseg button, .lseg button, .ib, .add, .dtabs button, .layout-pick, .fonts button { transition: filter .15s, background-color .15s, box-shadow .15s, border-color .15s; }
 }

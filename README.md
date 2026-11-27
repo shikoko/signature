@@ -12,7 +12,7 @@ Make a Gmail signature by editing it in place, then paste it into Gmail.
 - **Add what you need:** phone, email, website, address; GitHub, LinkedIn, X, Bluesky, Mastodon, Instagram, YouTube, Dribbble, Medium, Stack Overflow; App Store and Google Play; a booking link or any other link; pronouns, a tagline and small print.
 - **Arrange it.** Drag a contact line by the handle that appears beside it, or a link by the link itself; the arrows that appear on hover do the same.
 - **Design it.** The Design panel opens beside the signature, so every change shows as you make it. Its tabs cover:
-  - **Layout:** four ready-made styles, each shown as a small picture of your own signature; side by side, stacked, two columns or compact; a divider; and the order of the tagline, contact and links.
+  - **Layout:** side by side, stacked, two columns or compact, each shown as a small picture of your own signature with the colour, icons and font you've chosen; a divider; and the order of the tagline, contact and links.
   - **Colour:** twelve colours that are easy to read on white, or any colour, with a note when one is too light.
   - **Text:** five fonts; labels as words, icons or none; contact on one line or one per line.
   - **Icons:** brand colours, grey, or white on your colour; links as words, icons or both.
