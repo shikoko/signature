@@ -1,6 +1,12 @@
 # Working on the Gmail Signature Builder
 
-A static site (`index.html`, `styles.css`, `app.js`, `assets/`) with no build step. GitHub Pages serves `main` at https://shikoko.github.io/signature/, so merging into `main` publishes it.
+A static site with no build step. GitHub Pages serves `main` at https://shikoko.github.io/signature/, so merging into `main` publishes it.
+
+- `index.html`, `styles.css`: the page
+- `signature.js`: the signature's details and the renderer for the copied HTML, the email preview and the editable card
+- `app.js`: editing, the hover bar, the pop-ups, the Layout panel and copying
+- `icons/v1/`: the icons copied signatures link to; `tools/icons/` draws them
+- `assets/`: favicon, example photo, social preview image
 
 ## Commits and pull requests
 
@@ -35,7 +41,10 @@ Commits go out under the maintainer's name and are public, so they get quoted ou
 
 ## The page
 
-- **The signature it copies** is tables and inline styles in Helvetica and Arial, because Gmail removes stylesheets, web fonts, SVG and `data:` images from signatures. Images in it (the photo, profile logos) are hosted PNG or JPEG files. Keep it under Gmail's 10,000-character limit.
+- **The signature it copies** is tables and inline styles in Helvetica and Arial, because Gmail removes stylesheets, web fonts, SVG and `data:` images from signatures. Images in it (the photo, icons) are hosted PNG or JPEG files. Keep it under Gmail's 10,000-character limit.
+- **Never change, move or delete a file in `icons/v1/`.** Signatures pasted into people's mail keep loading those exact addresses. New icons are new files; new artwork for an existing icon goes into `icons/v2/`. See `icons/README.md`.
+- **One renderer.** The copied HTML, the email preview and the editable card all come from `render()` in `signature.js`, so a change to how the signature looks is made there once.
+- **Alignment is checked, not eyeballed.** Icons next to text sit on the text's centre line (see `icon()` in `signature.js`); controls are fixed-height flex boxes. After a visual change, measure text and icon centres in the controls and in the signature across layouts, and check that nothing is clipped.
 - **Words on the page** are plain and friendly: say what happens. Errors say what went wrong and what to do about it.
 - **Example data** uses made-up people: names that aren't real, `example.com` addresses, and UK phone numbers from Ofcom's drama range (`020 7946 0000` to `0999`).
 - **Nothing is sent anywhere.** Details stay in the browser's `localStorage`. If a change talks to a new service, say so in the pull request.
