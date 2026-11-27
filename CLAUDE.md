@@ -6,7 +6,8 @@ A static site with no build step. The **Website** workflow (`.github/workflows/w
 - `signature.js`: the signature's details and the renderer for the copied HTML, the email preview and the editable card
 - `app.js`: editing, the hover bar, the pop-ups, the Design panel and copying
 - `icons/v1/`: the icons copied signatures link to; `tools/icons/` draws them
-- `assets/`: favicon, example photo, social preview image
+- `assets/`: favicon, example photo, the README's example signature picture, the share picture (`social-preview.png`)
+- `tools/social-card/`: the share picture's source (`card.html`) and `render.js`, which renders it to `assets/social-preview.png` and, for the repository's social preview on GitHub (uploaded by hand in Settings), to `github-social-preview.png`. After changing it, bump the `?v=` on `og:image` in `index.html` so sites fetch the new picture.
 
 ## Commits and pull requests
 

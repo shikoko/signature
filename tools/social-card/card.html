@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!-- The share picture for https://shikoko.github.io/signature/: the source of
+     assets/social-preview.png (1200x630, the page's og:image) and of
+     github-social-preview.png (1280x640, uploaded by hand as the repository's
+     social preview on GitHub). render.js in this folder renders both.
+     Signature's icon drawn large: the pink-to-violet squiggle above its line,
+     on the page's dark background, beside the page's opening words. -->
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<title>Signature share picture</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Inter:wght@500&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; }
+  body { position: relative; background: #0e1014; color: #e6e9ef; font-family: "Bricolage Grotesque", sans-serif; -webkit-font-smoothing: antialiased; }
+  .text { position: absolute; z-index: 1; left: 80px; top: 80px; bottom: 74px; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 16px; font-size: 34px; font-weight: 700; letter-spacing: -.01em; }
+  .brand svg { width: 56px; height: 56px; }
+  h1 { margin-top: 44px; font-size: 100px; font-weight: 700; line-height: .95; letter-spacing: -.04em; }
+  h1 em { font-style: normal; background: linear-gradient(90deg, #ff4f9a, #8f6bff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .line { margin-top: 22px; font: 500 24px/1.35 Inter, sans-serif; color: #8b93a3; }
+  .site { margin-top: auto; font: 500 20px/1 "JetBrains Mono", monospace; letter-spacing: .02em; color: #ff4f9a; }
+  .art { position: absolute; inset: 0; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+  <div class="text">
+    <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="mark" x1="0" x2="1"><stop offset="0" stop-color="#ff4f9a"/><stop offset="1" stop-color="#8f6bff"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="#1d212a"/><path d="M7 19.5c2.2-.6 3.8-7.5 6.1-7.5 2 0-.9 8 1.2 8 1.6 0 2.6-4.4 4.2-4.4 1.4 0-.6 4.4 1 4.4 1.2 0 2.2-1.6 4.5-1.6" fill="none" stroke="url(#mark)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 24.5h18" stroke="#e6e9ef" stroke-opacity=".5" stroke-width="1.6" stroke-linecap="round"/></svg>Signature</div>
+    <h1>Make it<br><em>yours.</em></h1>
+    <p class="line">A Gmail signature,<br>edited in place.</p>
+    <p class="site">shikoko.github.io/signature</p>
+  </div>
+  <!-- The icon's squiggle at 26 times its size, starting at (560, 400), above its line -->
+  <svg class="art" viewBox="0 0 1200 630" preserveAspectRatio="xMaxYMid meet" aria-hidden="true">
+    <defs><linearGradient id="ink" x1="0" x2="1"><stop offset="0" stop-color="#ff4f9a"/><stop offset="1" stop-color="#8f6bff"/></linearGradient></defs>
+    <path d="M560 400 c 57.2 -15.6, 98.8 -195, 158.6 -195 c 52 0, -23.4 208, 31.2 208 c 41.6 0, 67.6 -114.4, 109.2 -114.4 c 36.4 0, -15.6 114.4, 26 114.4 c 31.2 0, 57.2 -41.6, 117 -41.6" fill="none" stroke="url(#ink)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 560 520 H 1130" stroke="#e6e9ef" stroke-opacity=".35" stroke-width="16" stroke-linecap="round"/>
+  </svg>
+</body>
+</html>
