@@ -18,7 +18,7 @@
   const failed = new Set(); // photo links that didn't load here
   const page = $("page"), sig = $("sig"), pop = $("pop"), bar = $("hoverbar"), sheet = $("sheet"), grip = $("grip");
   const stage = document.querySelector(".stage");
-  let mode = "edit", which = "full";
+  let which = "full";
   let barFor = null; // the line or link the hover bar is showing for
 
   const svg = (d) => '<svg class="i" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>';
@@ -81,17 +81,11 @@
   }
   function renderAll() {
     renderSig();
-    $("tip").hidden = !!st.edited;
-    $("poster").hidden = mode !== "edit";
-    $("mailView").hidden = mode !== "email";
-    $("card").classList.toggle("is-email", mode === "email");
-    $("addBtn").hidden = mode !== "edit";
     $("addBtn").setAttribute("aria-expanded", !pop.hidden && pop.dataset.for === "add");
-    if (mode === "email") showEmail($("mailBody"));
-    // While the Layout panel is open on a wide screen, the email preview also sits under the card.
+    // The email preview sits under the card, except while the Layout panel is open on a narrow
+    // screen, where the pinned card and the panel need the room.
     $("alsoPreview").hidden = !alsoShown();
     if (alsoShown()) showEmail($("alsoBody"));
-    document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-checked", b.dataset.mode === mode));
     document.querySelectorAll("[data-which]").forEach((b) => b.setAttribute("aria-checked", b.dataset.which === which));
     document.querySelectorAll(".sw").forEach((b) => b.setAttribute("aria-checked", b.dataset.hex === st.accent));
     $("customColor").value = st.accent;
@@ -107,7 +101,7 @@
         '<div class="sig-slot">' + html + "</div>";
     watchPhotos(body);
   }
-  const alsoShown = () => !sheet.hidden && mode === "edit" && window.innerWidth > 1100;
+  const alsoShown = () => sheet.hidden || window.innerWidth > 1100;
   const localOnly = () => !st.photo && !!st.localPhoto && st.showPhoto;
   function say(text, bad) {
     const status = $("status");
@@ -147,7 +141,7 @@
     dockNote();
     const clear = $("clear");
     if (clear) clear.addEventListener("click", () => {
-      S.clearExamples(st); save(); mode = "edit"; renderAll();
+      S.clearExamples(st); save(); renderAll();
       const n = sig.querySelector('[data-key="name"]');
       if (n) n.focus();
     });
@@ -163,7 +157,6 @@
     else if (el.dataset.itemValue) item(el.dataset.itemValue).value = text;
     else if (el.dataset.itemLabel) item(el.dataset.itemLabel).label = text;
     save();
-    $("tip").hidden = true;
     if (alsoShown()) showEmail($("alsoBody"));
     meta();
   });
@@ -201,7 +194,7 @@
   let hideTimer = null, dragId = null;
   const target = (el) => (el && el.closest ? el.closest("[data-item], [data-opt]") : null);
   function showBar(el) {
-    if (!el || mode !== "edit" || dragId) return;
+    if (!el || dragId) return;
     if (!pop.hidden && pop.dataset.for === (el.dataset.item || el.dataset.opt)) return;
     clearTimeout(hideTimer);
     sig.querySelectorAll(".hl").forEach((x) => x.classList.remove("hl"));
@@ -468,7 +461,7 @@
   const card = $("card");
   const hasFiles = (e) => !!e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files");
   card.addEventListener("dragover", (e) => {
-    if (!hasFiles(e) || mode !== "edit") return;
+    if (!hasFiles(e)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
     card.classList.add("drop-photo");
@@ -478,7 +471,7 @@
     if (!hasFiles(e)) return;
     e.preventDefault();
     card.classList.remove("drop-photo");
-    if (mode === "edit") useLocalPhoto(e.dataTransfer.files[0]);
+    useLocalPhoto(e.dataTransfer.files[0]);
   });
   // A file dropped anywhere else would otherwise replace this page.
   ["dragover", "drop"].forEach((type) => document.addEventListener(type, (e) => { if (hasFiles(e)) e.preventDefault(); }));
@@ -618,7 +611,6 @@
     $("swatches").appendChild(b);
   });
   $("customColor").addEventListener("input", (e) => { st.accent = e.target.value; save(); renderAll(); });
-  document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => { mode = b.dataset.mode; closePop(); hideBar(true); renderAll(); }));
   document.querySelectorAll("[data-which]").forEach((b) => b.addEventListener("click", () => { which = b.dataset.which; renderAll(); }));
 
   async function doCopy(variant) {
@@ -633,7 +625,6 @@
   }
   $("copyFull").addEventListener("click", () => doCopy("full"));
   $("dockFix").addEventListener("click", () => {
-    if (mode !== "edit") { mode = "edit"; renderAll(); }
     const photoBtn = sig.querySelector(".photo-btn");
     if (!photoBtn) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
