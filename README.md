@@ -4,7 +4,7 @@ Make a Gmail signature by editing it in place, then paste it into Gmail.
 
 **Live:** https://shikoko.github.io/signature/
 
-![An example signature with a photo, name, job title, contact details and profile icons, next to the words "Make it yours."](assets/social-preview.png)
+![An example signature with a photo, name, job title, contact details and profile icons, next to the words "Make it yours."](assets/example-signature.png)
 
 ## What it does
 
@@ -34,7 +34,8 @@ Gmail removes stylesheets, web fonts, SVG and embedded `data:` images from signa
 - `app.js`: editing, the hover bar, the pop-ups, the Design panel and copying
 - `icons/v1/`: the icons the copied signatures link to
 - `tools/icons/`: the script that draws the icons
-- `assets/`: the favicon, the example photo and the social preview image
+- `assets/`: the favicon, the example photo, the example signature at the top of this README, and the share picture (`social-preview.png`)
+- `tools/social-card/`: the share picture's source, `card.html`, and `render.js`, which renders it for the site and at 1280×640 for the repository's social preview on GitHub
 - `.github/workflows/`: publishing the site, checks on pull requests, and tidying pull request footers
 
 ## Running it locally

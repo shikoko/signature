@@ -1,0 +1,11 @@
+{
+  "name": "signature-social-card",
+  "private": true,
+  "description": "Renders the site's share picture, assets/social-preview.png, and the repository's GitHub preview from card.html.",
+  "scripts": {
+    "render": "node render.js"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
