@@ -518,8 +518,10 @@
 
   // ---------- Design panel ----------
   const LAYOUTS = [["side", "Side by side"], ["stacked", "Stacked"], ["columns", "Two columns"], ["compact", "Compact"]];
-  // Every colour here is at least 4.5:1 against white, so small text in it stays easy to read.
-  const COLOURS = ["#5b3fd6", "#c2185b", "#0a6aa1", "#087a45", "#a35400", "#374151", "#7c3aed", "#be123c", "#0e7490", "#15803d", "#b45309", "#111827"];
+  // Twelve clearly different colours: violet, blue, teal, green, olive and orange, then red, pink,
+  // plum, brown, slate and near-black. Every one is at least 4.5:1 against white, so small text
+  // in it stays easy to read.
+  const COLOURS = ["#5b3fd6", "#1d4ed8", "#0e7490", "#087a45", "#4d7c0f", "#a35400", "#b91c1c", "#c2185b", "#86198f", "#78350f", "#374151", "#111827"];
   const TABS = [["layout", "Layout"], ["colour", "Colour"], ["text", "Text"], ["icons", "Icons"], ["photo", "Photo"]];
   let tab = "layout";
   const current = (set) => set === "photoShape" ? (st.showPhoto ? st.photoShape : "none") : set === "divider" ? (st.divider ? "on" : "off") : st[set];
