@@ -87,15 +87,10 @@
     $("card").classList.toggle("is-email", mode === "email");
     $("addBtn").hidden = mode !== "edit";
     $("addBtn").setAttribute("aria-expanded", !pop.hidden && pop.dataset.for === "add");
-    if (mode === "email") {
-      const html = S.render(st, "preview", which, env);
-      $("mailBody").innerHTML = which === "reply"
-        ? "<p>Sounds good. The crash fix goes out in Monday's build.</p>" + html +
-          '<div class="quote">On Thu, Nov 26, 2026 at 6:04 PM Ana wrote:<br>Can we get the crash fix in before the release?</div>'
-        : "<p>Hi Ana,</p><p>The TestFlight build with the new onboarding flow is up (1.8.0, build 412). Let me know if anything looks off on your device.</p><p>Thanks,</p>" +
-          '<div class="sig-slot">' + html + "</div>";
-      watchPhotos($("mailBody"));
-    }
+    if (mode === "email") showEmail($("mailBody"));
+    // While the Layout panel is open on a wide screen, the email preview also sits under the card.
+    $("alsoPreview").hidden = !alsoShown();
+    if (alsoShown()) showEmail($("alsoBody"));
     document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-checked", b.dataset.mode === mode));
     document.querySelectorAll("[data-which]").forEach((b) => b.setAttribute("aria-checked", b.dataset.which === which));
     document.querySelectorAll(".sw").forEach((b) => b.setAttribute("aria-checked", b.dataset.hex === st.accent));
@@ -103,6 +98,16 @@
     if (!sheet.hidden) buildSheet();
     meta();
   }
+  function showEmail(body) {
+    const html = S.render(st, "preview", which, env);
+    body.innerHTML = which === "reply"
+      ? "<p>Sounds good. The crash fix goes out in Monday's build.</p>" + html +
+        '<div class="quote">On Thu, Nov 26, 2026 at 6:04 PM Ana wrote:<br>Can we get the crash fix in before the release?</div>'
+      : "<p>Hi Ana,</p><p>The TestFlight build with the new onboarding flow is up (1.8.0, build 412). Let me know if anything looks off on your device.</p><p>Thanks,</p>" +
+        '<div class="sig-slot">' + html + "</div>";
+    watchPhotos(body);
+  }
+  const alsoShown = () => !sheet.hidden && mode === "edit" && window.innerWidth > 1100;
   const localOnly = () => !st.photo && !!st.localPhoto && st.showPhoto;
   function say(text, bad) {
     const status = $("status");
@@ -111,15 +116,35 @@
     clearTimeout(status._t);
     status._t = setTimeout(() => { status.textContent = ""; }, 6000);
   }
+  // Problems that change what gets copied show on top of the toolbar, by the copy buttons,
+  // with a dot on "Copy for new emails" and a button that fixes them.
+  function copyWarning() {
+    if (localOnly()) return { text: "Your photo won't be in the copy: it's only on this computer.", fix: "Add a link" };
+    if (st.photo && st.showPhoto && failed.has(S.cleanUrl(st.photo))) {
+      return { text: "Your photo link didn't load here, so it may not show in Gmail either.", fix: "Change the link" };
+    }
+    return null;
+  }
+  function dockNote() {
+    const w = copyWarning(), note = $("dockNote");
+    note.hidden = !w;
+    if (w) {
+      $("dockNoteText").textContent = w.text;
+      $("dockFix").textContent = w.fix;
+      $("copyFull").setAttribute("data-warn", "");
+    } else {
+      $("copyFull").removeAttribute("data-warn");
+    }
+    document.documentElement.style.setProperty("--note-space", w ? note.offsetHeight + "px" : "0px");
+  }
   function meta() {
     const ex = S.examplesInUse(st), r = S.contrast(st.accent), size = S.render(st, "export", "full").length;
     const parts = [];
     if (ex) parts.push('<span>Example details: <button type="button" id="clear">clear them</button></span>');
-    if (st.photo && st.showPhoto && failed.has(S.cleanUrl(st.photo))) parts.push('<span class="bad">Photo link didn\'t load</span>');
-    if (localOnly()) parts.push('<span class="bad">Your photo is only on this computer: add a link to copy it</span>');
     parts.push('<span class="' + (r < 4.5 ? "bad" : "") + '">' + r.toFixed(1) + ":1 contrast" + (r < 4.5 ? ", too light" : "") + "</span>");
     parts.push('<span class="' + (size > S.LIMIT ? "bad" : "") + '">' + size.toLocaleString("en-GB") + " / " + S.LIMIT.toLocaleString("en-GB") + " characters</span>");
     $("meta").innerHTML = parts.join("");
+    dockNote();
     const clear = $("clear");
     if (clear) clear.addEventListener("click", () => {
       S.clearExamples(st); save(); mode = "edit"; renderAll();
@@ -139,6 +164,7 @@
     else if (el.dataset.itemLabel) item(el.dataset.itemLabel).label = text;
     save();
     $("tip").hidden = true;
+    if (alsoShown()) showEmail($("alsoBody"));
     meta();
   });
   sig.addEventListener("keydown", (e) => {
@@ -301,12 +327,13 @@
   // ---------- pop-ups ----------
   // Opens under the anchor unless there's more room above it; the bottom toolbar counts as no room.
   // With `below`, it always opens under the anchor and the page scrolls just enough to show it.
-  function placePop(anchor, preferAbove, below) {
+  function placePop(anchor, preferAbove, below, alignEnd) {
     pop.hidden = false;
     const pr = page.getBoundingClientRect(), r = anchor.getBoundingClientRect(), h = pop.offsetHeight;
     const roomBelow = window.innerHeight - 110 - r.bottom, roomAbove = r.top - 8;
     const above = !below && (preferAbove ? roomAbove >= h + 10 || roomAbove > roomBelow : roomBelow < h + 10 && roomAbove > roomBelow);
-    pop.style.left = Math.max(12, Math.min(r.left - pr.left + r.width / 2 - pop.offsetWidth / 2, pr.width - pop.offsetWidth - 12)) + "px";
+    const x = alignEnd ? r.right - pr.left - pop.offsetWidth : r.left - pr.left + r.width / 2 - pop.offsetWidth / 2;
+    pop.style.left = Math.max(12, Math.min(x, pr.width - pop.offsetWidth - 12)) + "px";
     pop.style.top = Math.max(8, above ? r.top - pr.top - h - 10 : r.bottom - pr.top + 10) + "px";
     const hidden = pop.getBoundingClientRect().bottom - (window.innerHeight - 110);
     if (below && hidden > 0) {
@@ -335,7 +362,7 @@
   window.addEventListener("resize", () => {
     if (!pop.hidden) closePop();
     hideBar(true);
-    if (!sig.contains(document.activeElement)) { scale = scaleFor(); renderSig(); }
+    if (!sig.contains(document.activeElement)) { scale = scaleFor(); renderAll(); }
   });
 
   function openLink(id, anchor) {
@@ -478,7 +505,7 @@
       const el = sig.querySelector('[data-key="' + b.dataset.optAdd + '"]');
       if (el) el.focus();
     }));
-    placePop(anchor, false, true);
+    placePop(anchor, false, true, true);
     $("addBtn").setAttribute("aria-expanded", "true");
   }
   function addItem(type) {
@@ -568,8 +595,9 @@
     sheet.hidden = !open;
     stage.classList.toggle("panel-open", open);
     $("layoutBtn").setAttribute("aria-expanded", open);
-    if (open) { closePop(); hideBar(true); buildSheet(); }
-    if (scaleFor() !== scale) { scale = scaleFor(); renderSig(); }
+    if (open) { closePop(); hideBar(true); }
+    scale = scaleFor();
+    renderAll();
     if (open) {
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       stage.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
@@ -604,6 +632,14 @@
     else say(what + ". " + (notes.length ? notes.join(" ") : "Paste it into Gmail."), notes.length > 0);
   }
   $("copyFull").addEventListener("click", () => doCopy("full"));
+  $("dockFix").addEventListener("click", () => {
+    if (mode !== "edit") { mode = "edit"; renderAll(); }
+    const photoBtn = sig.querySelector(".photo-btn");
+    if (!photoBtn) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    photoBtn.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+    openPhoto(photoBtn);
+  });
   $("copyReply").addEventListener("click", () => doCopy("reply"));
 
   renderAll();

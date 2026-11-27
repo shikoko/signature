@@ -44,25 +44,40 @@
 
   <section class="stage" aria-label="Your signature">
     <div class="glow" aria-hidden="true"></div>
-    <div class="card" id="card">
-      <div class="dseg mode-switch" role="radiogroup" aria-label="View"><button type="button" role="radio" data-mode="edit">Edit</button><button type="button" role="radio" data-mode="email">Email preview</button></div>
-      <div class="poster" id="poster">
-        <span class="tip" id="tip">Click any part to edit</span>
-        <div class="poster-scroll"><div class="sig" id="sig"></div></div>
+    <div class="work" id="work">
+      <div class="card-bar">
+        <div class="tabs" role="radiogroup" aria-label="View"><button type="button" role="radio" data-mode="edit">Edit</button><button type="button" role="radio" data-mode="email">Email preview</button></div>
+        <button type="button" class="add" id="addBtn" aria-haspopup="dialog" title="Add a phone number, a profile, an app link and more"><svg class="i" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>Add</button>
       </div>
-      <div class="mail" id="mailView" hidden>
-        <div class="mail-bar">
-          <span>To: ana@example.com</span>
-          <div class="lseg" role="radiogroup" aria-label="Which signature"><button type="button" role="radio" data-which="full">New email</button><button type="button" role="radio" data-which="reply">Reply</button></div>
+      <div class="card" id="card">
+        <div class="poster" id="poster">
+          <span class="tip" id="tip">Click any part to edit</span>
+          <div class="poster-scroll"><div class="sig" id="sig"></div></div>
         </div>
-        <div class="mail-body" id="mailBody"></div>
+        <div class="mail" id="mailView" hidden>
+          <div class="mail-bar">
+            <span>To: ana@example.com</span>
+            <div class="lseg" role="radiogroup" aria-label="Which signature"><button type="button" role="radio" data-which="full">New email</button><button type="button" role="radio" data-which="reply">Reply</button></div>
+          </div>
+          <div class="mail-body" id="mailBody"></div>
+        </div>
       </div>
-      <button type="button" class="add" id="addBtn" aria-haspopup="dialog" title="Add a phone number, a profile, an app link and more"><svg class="i" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>Add</button>
+      <div class="also" id="alsoPreview" hidden>
+        <span class="also-label">In an email</span>
+        <div class="also-mail">
+          <div class="mail-bar">
+            <span>To: ana@example.com</span>
+            <div class="lseg" role="radiogroup" aria-label="Which signature"><button type="button" role="radio" data-which="full">New email</button><button type="button" role="radio" data-which="reply">Reply</button></div>
+          </div>
+          <div class="mail-body" id="alsoBody"></div>
+        </div>
+      </div>
     </div>
     <aside class="sheet" id="sheet" aria-label="Layout" hidden></aside>
   </section>
 
   <div class="dock-wrap" id="dockWrap">
+    <div class="dock-note" id="dockNote" role="status" hidden><span><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.8 15 14H1L8 1.8Z"/><path d="M8 6.5v3.2M8 11.8v.1"/></svg><span id="dockNoteText"></span></span><button type="button" class="fix" id="dockFix"></button></div>
     <div class="dock" role="toolbar" aria-label="Signature options">
       <div class="swatches" id="swatches" role="radiogroup" aria-label="Colour"></div>
       <label class="custom-color" title="Any colour"><input type="color" id="customColor" aria-label="Pick any colour"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg></label>
