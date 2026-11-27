@@ -1,0 +1,13 @@
+{
+  "name": "signature-icons",
+  "private": true,
+  "description": "Renders the signature icons in icons/v1/ from Simple Icons and Tabler Icons.",
+  "scripts": {
+    "render": "node render.js"
+  },
+  "devDependencies": {
+    "@tabler/icons": "3.53.0",
+    "playwright": "1.63.0",
+    "simple-icons": "16.38.1"
+  }
+}
