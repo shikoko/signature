@@ -4,7 +4,7 @@ A static site with no build step. The **Website** workflow (`.github/workflows/w
 
 - `index.html`, `styles.css`: the page
 - `signature.js`: the signature's details and the renderer for the copied HTML, the email preview and the editable card
-- `app.js`: editing, the hover bar, the pop-ups, the Layout panel and copying
+- `app.js`: editing, the hover bar, the pop-ups, the Design panel and copying
 - `icons/v1/`: the icons copied signatures link to; `tools/icons/` draws them
 - `assets/`: favicon, example photo, social preview image
 
