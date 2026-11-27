@@ -517,21 +517,9 @@
   });
 
   // ---------- Design panel ----------
-  const SCHEMA = {
-    side: '<svg viewBox="0 0 64 38" aria-hidden="true"><circle cx="12" cy="19" r="8"/><rect x="25" y="9" width="1.2" height="20"/><rect x="30" y="10" width="22" height="3.4" rx="1.7"/><rect x="30" y="17" width="16" height="2.2" rx="1.1"/><rect x="30" y="23" width="28" height="2.2" rx="1.1"/></svg>',
-    stacked: '<svg viewBox="0 0 64 38" aria-hidden="true"><circle cx="12" cy="9" r="6"/><rect x="6" y="19" width="24" height="3.4" rx="1.7"/><rect x="6" y="25" width="16" height="2.2" rx="1.1"/><rect x="6" y="31" width="30" height="2.2" rx="1.1"/></svg>',
-    columns: '<svg viewBox="0 0 64 38" aria-hidden="true"><circle cx="9" cy="19" r="5"/><rect x="17" y="15" width="14" height="3" rx="1.5"/><rect x="17" y="20.5" width="10" height="2" rx="1"/><rect x="36" y="8" width="1.2" height="22"/><rect x="41" y="10" width="18" height="2.2" rx="1.1"/><rect x="41" y="16" width="14" height="2.2" rx="1.1"/><rect x="41" y="22" width="16" height="2.2" rx="1.1"/></svg>',
-    compact: '<svg viewBox="0 0 64 38" aria-hidden="true"><rect x="6" y="14" width="18" height="3.4" rx="1.7"/><rect x="27" y="14" width="22" height="3" rx="1.5"/><rect x="6" y="21" width="30" height="2.2" rx="1.1"/></svg>'
-  };
+  const LAYOUTS = [["side", "Side by side"], ["stacked", "Stacked"], ["columns", "Two columns"], ["compact", "Compact"]];
   // Every colour here is at least 4.5:1 against white, so small text in it stays easy to read.
   const COLOURS = ["#5b3fd6", "#c2185b", "#0a6aa1", "#087a45", "#a35400", "#374151", "#7c3aed", "#be123c", "#0e7490", "#15803d", "#b45309", "#111827"];
-  // Ready-made styles set the layout, font, labels and icons together. Colour and details stay.
-  const STYLES = [
-    ["Classic", { layout: "side", font: "helvetica", labels: "icons", contactAs: "lines", linksAs: "icons", iconStyle: "brand", showPhoto: true, photoShape: "circle", divider: true }],
-    ["Minimal", { layout: "compact", font: "helvetica", labels: "words", contactAs: "inline", linksAs: "words", iconStyle: "grey", showPhoto: false, divider: false }],
-    ["Editorial", { layout: "stacked", font: "georgia", labels: "words", contactAs: "lines", linksAs: "both", iconStyle: "grey", showPhoto: true, photoShape: "rounded", divider: true }],
-    ["Bold", { layout: "columns", font: "verdana", labels: "icons", contactAs: "lines", linksAs: "icons", iconStyle: "accent", showPhoto: true, photoShape: "circle", divider: true }]
-  ];
   const TABS = [["layout", "Layout"], ["colour", "Colour"], ["text", "Text"], ["icons", "Icons"], ["photo", "Photo"]];
   let tab = "layout";
   const current = (set) => set === "photoShape" ? (st.showPhoto ? st.photoShape : "none") : set === "divider" ? (st.divider ? "on" : "off") : st[set];
@@ -551,11 +539,8 @@
   const PAGES = {
     layout: () => {
       const names = { tagline: "Tagline", contact: "Contact", links: "Links" };
-      return opt("Start from a style", '<div class="styles" role="radiogroup" aria-label="Styles">' + STYLES.map(([name, p], k) =>
-          '<button type="button" class="style" role="radio" data-style="' + k + '" aria-checked="' + Object.keys(p).every((x) => st[x] === p[x]) + '">' +
-          '<span class="thumb" aria-hidden="true"></span><span class="style-name">' + name + "</span></button>").join("") + "</div>", true) +
-        opt("Layout", '<div class="tiles" role="radiogroup" aria-label="Layout">' + [["side", "Side by side"], ["stacked", "Stacked"], ["columns", "Two columns"], ["compact", "Compact"]].map(([v, l]) =>
-          radio("layout", v, "tile", SCHEMA[v] + l)).join("") + "</div>", true) +
+      return opt("Layout", '<div class="layout-grid" role="radiogroup" aria-label="Layout">' + LAYOUTS.map(([v, l]) =>
+          radio("layout", v, "layout-pick", '<span class="thumb" aria-hidden="true"></span><span class="layout-name">' + l + "</span>")).join("") + "</div>", true) +
         opt("Divider", seg("divider", [["on", "Show"], ["off", "Hide"]])) +
         opt("Order", '<div class="order">' + st.blocks.map((b, k) =>
           "<div>" + names[b] + "<span>" +
@@ -598,31 +583,28 @@
     t.style.left = (box.clientWidth - w * k) / 2 + "px";
     t.style.top = (box.clientHeight - h * k) / 2 + "px";
   }
-  // Each style is drawn small from the person's own signature.
-  function drawStyles() {
-    sheet.querySelectorAll("[data-style]").forEach((b) =>
-      picture(b.querySelector(".thumb"), S.render(Object.assign({}, st, STYLES[+b.dataset.style][1]), "preview", "full", env), 0.6));
+  // Each layout is drawn small from the person's own signature, changing only the layout, so
+  // each picture keeps their colour, icons, font, labels and photo.
+  function drawLayouts() {
+    sheet.querySelectorAll('[data-set="layout"]').forEach((b) =>
+      picture(b.querySelector(".thumb"), S.render(Object.assign({}, st, { layout: b.dataset.val }), "preview", "full", env), 0.6));
   }
   function buildSheet() {
     // Rebuilding would lose the panel's scroll position and the focused button, so keep both.
     const scrollTop = sheet.scrollTop, f = sheet.contains(document.activeElement) ? document.activeElement : null;
     const refocus = f && (f.dataset.set ? '[data-set="' + f.dataset.set + '"][data-val="' + f.dataset.val + '"]'
       : f.dataset.ord != null ? '[data-ord="' + f.dataset.ord + '"][data-dir="' + f.dataset.dir + '"]'
-      : f.dataset.style != null ? '[data-style="' + f.dataset.style + '"]' : f.dataset.tab ? '[data-tab="' + f.dataset.tab + '"]' : f.id ? "#" + f.id : null);
+      : f.dataset.tab ? '[data-tab="' + f.dataset.tab + '"]' : f.id ? "#" + f.id : null);
     sheet.innerHTML = '<div class="sheet-head"><h3>Design</h3><button type="button" class="done" id="sheetDone">Done</button></div>' +
       '<div class="dtabs" role="tablist" aria-label="Design">' + TABS.map(([k, l]) =>
         '<button type="button" role="tab" id="tab-' + k + '" data-tab="' + k + '" aria-selected="' + (tab === k) + '" aria-controls="tabPage" tabindex="' + (tab === k ? 0 : -1) + '">' + l + "</button>").join("") + "</div>" +
       '<div class="tab-page" id="tabPage" role="tabpanel" aria-labelledby="tab-' + tab + '">' + PAGES[tab]() + "</div>";
-    if (tab === "layout") drawStyles();
+    if (tab === "layout") drawLayouts();
     sheet.querySelectorAll("[data-set]").forEach((b) => b.addEventListener("click", () => {
       const set = b.dataset.set, v = b.dataset.val;
       if (set === "photoShape") { st.showPhoto = v !== "none"; if (v !== "none") st.photoShape = v; }
       else if (set === "divider") st.divider = v === "on";
       else st[set] = v;
-      save(); renderAll();
-    }));
-    sheet.querySelectorAll("[data-style]").forEach((b) => b.addEventListener("click", () => {
-      Object.assign(st, STYLES[+b.dataset.style][1]);
       save(); renderAll();
     }));
     sheet.querySelectorAll("[data-ord]").forEach((b) => b.addEventListener("click", () => {
