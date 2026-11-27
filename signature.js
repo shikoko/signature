@@ -8,7 +8,16 @@ window.Signature = (function () {
   const SITE = "https://shikoko.github.io/signature/";
   const ICONS = "icons/v1/";
   const EXAMPLE_PHOTO = SITE + "assets/example-photo.png";
-  const FONT = "Helvetica,Arial,sans-serif";
+  // Fonts that come with Windows, macOS and iOS, so readers see the signature in the same font.
+  // Gmail removes web fonts from signatures, so a font only shows if the reader's device has it;
+  // each list ends in a generic family, which is what Android and other devices fall back to.
+  const FONTS = {
+    helvetica: { label: "Helvetica", stack: "Helvetica,Arial,sans-serif" },
+    verdana: { label: "Verdana", stack: "Verdana,Geneva,sans-serif" },
+    trebuchet: { label: "Trebuchet", stack: "'Trebuchet MS',Tahoma,sans-serif" },
+    georgia: { label: "Georgia", stack: "Georgia,'Times New Roman',serif" },
+    palatino: { label: "Palatino", stack: "'Palatino Linotype',Palatino,'Book Antiqua',serif" }
+  };
   const INK = "#111a16", SUB = "#5f6b66", BODY = "#3a4541", RULE = "#d9dedc", SEP = "#b8c1bd", FAINT = "#8a938f";
   const LIMIT = 10000;
   const TBL = 'cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;"';
@@ -48,7 +57,7 @@ window.Signature = (function () {
     ],
     blocks: ["tagline", "contact", "links"],
     layout: "side", photoShape: "circle", photoSize: "M", showPhoto: true, divider: true,
-    labels: "icons", contactAs: "lines", linksAs: "icons", iconStyle: "brand",
+    labels: "icons", contactAs: "lines", linksAs: "icons", iconStyle: "brand", font: "helvetica",
     accent: "#5b3fd6", edited: false
   };
 
@@ -107,6 +116,7 @@ window.Signature = (function () {
     env = env || {};
     const edit = mode === "edit", exp = mode === "export";
     const acc = /^#[0-9a-f]{6}$/i.test(st.accent || "") ? st.accent : EXAMPLE.accent;
+    const FONT = (FONTS[st.font] || FONTS.helvetica).stack;
     const ff = "font-family:" + FONT + ";";
     const CE = render.ce || "plaintext-only";
 
@@ -345,7 +355,7 @@ window.Signature = (function () {
   }
 
   return {
-    TYPES, OPTIONAL, EXAMPLE, LIMIT,
+    TYPES, OPTIONAL, EXAMPLE, FONTS, LIMIT,
     render, plainText, copy, load, save, examplesInUse, clearExamples,
     contrast, linkUrl, githubHandle, shown, uid, esc, iconPath, cleanUrl
   };
