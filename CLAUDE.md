@@ -41,7 +41,7 @@ Commits go out under the maintainer's name and are public, so they get quoted ou
 
 ## The page
 
-- **The signature it copies** is tables and inline styles in Helvetica and Arial, because Gmail removes stylesheets, web fonts, SVG and `data:` images from signatures. Images in it (the photo, icons) are hosted PNG or JPEG files. Keep it under Gmail's 10,000-character limit.
+- **The signature it copies** is tables and inline styles, in one of the fonts in `FONTS` in `signature.js`, because Gmail removes stylesheets, web fonts, SVG and `data:` images from signatures. A font added there must come with Windows, macOS and iOS, and its list must end in a generic family (`sans-serif` or `serif`). Images in it (the photo, icons) are hosted PNG or JPEG files. Keep it under Gmail's 10,000-character limit.
 - **Never change, move or delete a file in `icons/v1/`.** Signatures pasted into people's mail keep loading those exact addresses. New icons are new files; new artwork for an existing icon goes into `icons/v2/`. See `icons/README.md`. `.github/scripts/check-icons.mjs` checks this on every pull request and before every deploy, and the site isn't published while it fails.
 - **One renderer.** The copied HTML, the email preview and the editable card all come from `render()` in `signature.js`, so a change to how the signature looks is made there once.
 - **Alignment is checked, not eyeballed.** Icons next to text sit on the text's centre line (see `icon()` in `signature.js`); controls are fixed-height flex boxes. After a visual change, measure text and icon centres in the controls and in the signature across layouts, and check that nothing is clipped.

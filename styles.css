@@ -186,6 +186,7 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 .opts-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
 .opt { display: grid; gap: 7px; min-width: 0; align-content: start; justify-items: start; }
 .opt > span { font: 500 .78rem/1 var(--body); color: var(--muted); }
+.opt .hint { margin: 0; font-size: .76rem; line-height: 1.4; color: var(--muted); }
 .opt .dseg img { width: 14px; height: 14px; display: block; flex: none; }
 .chip { width: 18px; height: 18px; flex: none; border-radius: 50%; background: #5b3fd6; display: inline-flex; align-items: center; justify-content: center; }
 .opt .dseg .chip img { width: 10px; height: 10px; }

@@ -526,6 +526,9 @@
       '<div class="tiles" role="radiogroup" aria-label="Layout">' + [["side", "Side by side"], ["stacked", "Stacked"], ["columns", "Two columns"], ["compact", "Compact"]].map(([v, l]) =>
         '<button type="button" class="tile" role="radio" data-set="layout" data-val="' + v + '" aria-checked="' + (st.layout === v) + '">' + SCHEMA[v] + l + "</button>").join("") + "</div>" +
       '<div class="opts-grid">' +
+      '<div class="opt"><span>Font</span>' + seg("font", Object.keys(S.FONTS).map((k) =>
+        [k, '<span style="font-family:' + S.FONTS[k].stack + '">' + S.FONTS[k].label + "</span>"])) +
+      '<p class="hint">Fonts that come with computers and phones, so people see your signature as you do.</p></div>' +
       '<div class="opt"><span>Photo</span>' + seg("photoShape", [["circle", "Circle"], ["rounded", "Rounded"], ["square", "Square"], ["none", "None"]]) + "</div>" +
       '<div class="opt"><span>Photo size</span>' + seg("photoSize", [["S", "Small"], ["M", "Medium"], ["L", "Large"]]) + "</div>" +
       '<div class="opt"><span>Contact</span>' + seg("contactAs", [["inline", "On one line"], ["lines", "One per line"]]) + "</div>" +
