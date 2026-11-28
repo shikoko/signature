@@ -11,6 +11,8 @@ window.Signature = (function () {
   // Fonts that come with Windows, macOS and iOS, so readers see the signature in the same font.
   // Gmail removes web fonts from signatures, so a font only shows if the reader's device has it;
   // each list ends in a generic family, which is what Android and other devices fall back to.
+  // A Google font (fontSource "google", webFont its name) goes before one of these, which is
+  // what everyone who doesn't have it installed sees.
   const FONTS = {
     helvetica: { label: "Helvetica", stack: "Helvetica,Arial,sans-serif" },
     verdana: { label: "Verdana", stack: "Verdana,Geneva,sans-serif" },
@@ -57,7 +59,7 @@ window.Signature = (function () {
     ],
     blocks: ["tagline", "contact", "links"],
     layout: "side", photoShape: "circle", photoSize: "M", showPhoto: true, divider: true,
-    labels: "icons", contactAs: "lines", linksAs: "icons", iconStyle: "brand", font: "helvetica",
+    labels: "icons", contactAs: "lines", linksAs: "icons", iconStyle: "brand", font: "helvetica", fontSource: "builtin", webFont: "",
     accent: "#5b3fd6", edited: false
   };
 
@@ -104,6 +106,11 @@ window.Signature = (function () {
     const p = String(name || "").split(/\s+/).filter(Boolean);
     return p.length ? (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase() : "?";
   }
+  // The Google font in use, if any. Names are letters, digits and spaces, as on Google Fonts.
+  function webFont(st) {
+    const n = (st.webFont || "").trim();
+    return st.fontSource === "google" && /^[A-Za-z0-9 ]{1,60}$/.test(n) ? n : "";
+  }
   // Whether an extra (pronouns, company, tagline, small print) is in this signature. Its text is
   // shared with the other signature, which may leave it out.
   function shown(st, key) { return !!st.show[key]; }
@@ -119,7 +126,7 @@ window.Signature = (function () {
     env = env || {};
     const edit = mode === "edit", exp = mode === "export";
     const acc = /^#[0-9a-f]{6}$/i.test(st.accent || "") ? st.accent : EXAMPLE.accent;
-    const FONT = (FONTS[st.font] || FONTS.helvetica).stack;
+    const FONT = (webFont(st) ? "'" + webFont(st) + "'," : "") + (FONTS[st.font] || FONTS.helvetica).stack;
     const ff = "font-family:" + FONT + ";";
     const CE = render.ce || "plaintext-only";
 
@@ -394,6 +401,6 @@ window.Signature = (function () {
   return {
     TYPES, OPTIONAL, EXAMPLE, FONTS, LIMIT,
     render, plainText, copy, load, save, examplesInUse, clearExamples, syncDetails, replyFrom,
-    contrast, linkUrl, githubHandle, shown, uid, esc, iconPath, cleanUrl
+    contrast, linkUrl, githubHandle, shown, uid, esc, iconPath, cleanUrl, webFont
   };
 })();
