@@ -14,7 +14,7 @@ Make a Gmail signature by editing it in place, then paste it into Gmail.
 - **Design it.** The Design panel opens beside the signature, so every change shows as you make it. Its tabs cover:
   - **Layout:** side by side, stacked, two columns or compact, each shown as a small picture of your own signature with the colour, icons and font you've chosen; a divider; and the order of the tagline, contact and links.
   - **Colour:** twelve colours that are easy to read on white, or any colour, with a note when one is too light.
-  - **Text:** five fonts; labels as words, icons or none; contact on one line or one per line.
+  - **Text:** five fonts that come with computers and phones, or any Google font with one of those five as its fallback; labels as words, icons or none; contact on one line or one per line.
   - **Icons:** brand colours, grey, or white on your colour; links as words, icons or both.
   - **Photo:** shape and size.
 - **A second signature for replies.** "Replies", above the card, switches to the signature Gmail adds to replies and forwards, and everything above works on it the same way: its own lines, their order, the extras it shows, and its own layout, colour, font, icons and photo. Your name and details are shared, so a change to them shows in both. It starts as a short version, with the name, title and links as words, and keeps up with the signature for new emails until you change it; "Back to the short version" starts again. "Add" can bring across a line from the other signature, with what's typed in it.
@@ -26,7 +26,7 @@ Make a Gmail signature by editing it in place, then paste it into Gmail.
 
 ## How the copied signature is built
 
-Gmail removes stylesheets, web fonts, SVG and embedded `data:` images from signatures, so the copied HTML uses only tables, inline styles and one of five fonts that come with computers and phones: Helvetica, Verdana, Trebuchet, Georgia or Palatino. A font only shows if the reader's device has it, so the list sticks to those; Android and other devices without them use their own font of the same kind. Icons are PNG files hosted on this site under `icons/v1/`; see [icons/README.md](icons/README.md) for where they come from, their licences, and why those files must never change. Outlook and some company mail servers block images, so the Words options for labels and links are the safest choice when that matters.
+Gmail removes stylesheets, web fonts, SVG and embedded `data:` images from signatures, so the copied HTML uses only tables, inline styles and one of five fonts that come with computers and phones: Helvetica, Verdana, Trebuchet, Georgia or Palatino. A font only shows if the reader's device has it, so the list sticks to those; Android and other devices without them use their own font of the same kind. A Google font can go first, with one of the five after it as its fallback: Gmail doesn't load web fonts, so only people who have that font installed see it and everyone else sees the fallback, as the Text tab says. The page loads the chosen font from Google Fonts to show it, and its list of Google fonts, `assets/google-fonts.json`, is made by `tools/google-fonts/update.mjs`. Icons are PNG files hosted on this site under `icons/v1/`; see [icons/README.md](icons/README.md) for where they come from, their licences, and why those files must never change. Outlook and some company mail servers block images, so the Words options for labels and links are the safest choice when that matters.
 
 ## Files
 
@@ -35,7 +35,8 @@ Gmail removes stylesheets, web fonts, SVG and embedded `data:` images from signa
 - `app.js`: editing, the hover bar, the pop-ups, the Design panel and copying
 - `icons/v1/`: the icons the copied signatures link to
 - `tools/icons/`: the script that draws the icons
-- `assets/`: the favicon, the example photo, the example signature at the top of this README, and the share picture (`social-preview.png`)
+- `assets/`: the favicon, the example photo, the example signature at the top of this README, the share picture (`social-preview.png`), and the list of Google fonts (`google-fonts.json`)
+- `tools/google-fonts/`: `update.mjs`, which makes the list of Google fonts from Google Fonts' own list, most popular first
 - `tools/social-card/`: the share picture's source, `card.html`, and `render.js`, which renders it for the site and at 1280×640 for the repository's social preview on GitHub
 - `.github/workflows/`: publishing the site, checks on pull requests, and tidying pull request footers
 

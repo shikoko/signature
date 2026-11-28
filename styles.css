@@ -280,6 +280,21 @@ h1 em { font-style: normal; background: linear-gradient(90deg, var(--l2), var(--
 .fonts button[aria-checked="true"] { border-color: var(--l5); box-shadow: 0 0 0 1px var(--l5) inset; }
 .fonts .sample { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.02rem; line-height: 1.25; }
 .fonts .fname { flex: none; font: 500 .74rem/1 var(--mono); color: var(--muted); }
+/* Google fonts: a search field, its matches shown in their own fonts, and a note about Gmail */
+.opt > .dseg { justify-self: start; }
+.gfont { display: grid; gap: 4px; }
+.gfont input { width: 100%; height: 40px; padding: 0 12px; font: 400 .95rem/1 var(--body); color: var(--text); background: var(--page); border: 1px solid var(--line-strong); border-radius: 10px; }
+.gfont input::placeholder { color: var(--muted); }
+.gfont input:focus { outline: none; border-color: var(--l5); box-shadow: 0 0 0 3px rgba(143, 107, 255, .25); }
+.gfont-list { display: grid; gap: 2px; padding: 4px; max-height: 240px; overflow: auto; background: var(--raised); border: 1px solid var(--line-strong); border-radius: 10px; }
+.gfont-list [role="option"] { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 36px; padding: 0 10px; border-radius: 7px; cursor: pointer; }
+.gfont-list [role="option"]:hover { background: var(--line); }
+.gfont-list [role="option"][aria-selected="true"] { background: var(--line-strong); }
+.gname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.02rem; line-height: 1.25; color: var(--text); }
+.gkind { flex: none; font: 500 .72rem/1 var(--mono); color: var(--muted); }
+.gnone { margin: 0; padding: 8px 10px; font-size: .82rem; line-height: 1.4; color: var(--muted); }
+.font-note { margin: 0; padding: 9px 11px; border-radius: 10px; background: rgba(255, 173, 31, .08); border: 1px solid rgba(255, 173, 31, .3); color: #ffcf7a; font-size: .78rem; line-height: 1.45; }
+.font-note.bad { background: rgba(255, 79, 154, .08); border-color: rgba(255, 79, 154, .35); color: #ff8fb9; }
 /* Icon colours, shown on white as they'll be in the signature */
 .istyles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0 2px; }
 .istyles button { display: grid; gap: 8px; justify-items: center; align-content: center; height: 74px; padding: 0 4px; color: #3b4048; background: #fff; border: 0; border-radius: 12px; font: 600 .78rem/1 var(--body); cursor: pointer; }

@@ -97,6 +97,7 @@
   }
   // `keepPanel` leaves the Design panel as it is, for changes made from inside it that it shows already.
   function renderAll(keepPanel) {
+    if (S.webFont(st)) useFont(S.webFont(st));
     renderSig();
     $("addBtn").setAttribute("aria-expanded", !pop.hidden && pop.dataset.for === "add");
     $("alsoPreview").hidden = !alsoShown();
@@ -388,7 +389,10 @@
   window.addEventListener("resize", () => {
     if (!pop.hidden) closePop();
     hideBar(true);
-    if (!sig.contains(document.activeElement)) { scale = scaleFor(); renderAll(); }
+    // Someone typing in the Design panel, such as a Google font's name, keeps the panel as it is:
+    // on phones the keyboard opening resizes the window.
+    const typing = sheet.contains(document.activeElement) && document.activeElement.matches('input[type="text"]');
+    if (!sig.contains(document.activeElement)) { scale = scaleFor(); renderAll(typing); }
   });
 
   function openLink(id, anchor) {
@@ -610,10 +614,16 @@
         '<p class="contrast' + (c.bad ? " bad" : "") + '" id="contrast">' + c.text + "</p>";
     },
     text: () => {
-      const sample = S.esc((st.name || "").trim() || "Your name");
-      return opt("Font", '<div class="fonts" role="radiogroup" aria-label="Font">' + Object.keys(S.FONTS).map((k) =>
-          radio("font", k, "", '<span class="sample" style="font-family:' + S.FONTS[k].stack + '">' + sample + '</span><span class="fname">' + S.FONTS[k].label + "</span>")).join("") + "</div>" +
-          '<p class="hint">Fonts that come with computers and phones, so people see your signature as you do.</p>', true) +
+      const sample = S.esc((st.name || "").trim() || "Your name"), google = st.fontSource === "google", web = S.webFont(st);
+      const tiles = '<div class="fonts" role="radiogroup" aria-label="' + (google ? "Fallback font" : "Font") + '">' + Object.keys(S.FONTS).map((k) =>
+        radio("font", k, "", '<span class="sample" style="font-family:' + S.FONTS[k].stack + '">' + sample + '</span><span class="fname">' + S.FONTS[k].label + "</span>")).join("") + "</div>";
+      return opt("Font", seg("fontSource", [["builtin", "Built in"], ["google", "Google Fonts"]]) + (google ? "" : tiles +
+          '<p class="hint">Fonts that come with computers and phones, so people see your signature as you do.</p>'), true) +
+        (google ? opt("Google font", '<div class="gfont"><input id="gfontInput" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="gfontList"' +
+            ' autocomplete="off" spellcheck="false" placeholder="Search Google Fonts" aria-label="Google font" value="' + S.esc(st.webFont || "") + '">' +
+            '<div class="gfont-list" id="gfontList" role="listbox" aria-label="Google fonts" hidden></div></div>' +
+            '<p class="font-note" id="gfontNote">' + fontNote(web) + "</p>", true) +
+          opt("Fallback", tiles + '<p class="hint">' + (web ? "Anyone who doesn't have " + S.esc(web) + " sees this font." : "What people see until you choose a Google font.") + "</p>", true) : "") +
         opt("Labels", seg("labels", [["icons", "Icons"], ["words", "Words"], ["none", "None"]])) +
         opt("Contact", seg("contactAs", [["lines", "One per line"], ["inline", "On one line"]]));
     },
@@ -654,6 +664,7 @@
         '<button type="button" role="tab" id="tab-' + k + '" data-tab="' + k + '" aria-selected="' + (tab === k) + '" aria-controls="tabPage" tabindex="' + (tab === k ? 0 : -1) + '">' + l + "</button>").join("") + "</div>" +
       '<div class="tab-page" id="tabPage" role="tabpanel" aria-labelledby="tab-' + tab + '">' + PAGES[tab]() + "</div>";
     if (tab === "layout") drawLayouts();
+    if ($("gfontInput")) fontSearch($("gfontInput"), $("gfontList"));
     sheet.querySelectorAll("[data-set]").forEach((b) => b.addEventListener("click", () => {
       const set = b.dataset.set, v = b.dataset.val;
       if (set === "photoShape") { st.showPhoto = v !== "none"; if (v !== "none") st.photoShape = v; }
@@ -753,6 +764,149 @@
     b.classList.remove("sure");
     b.textContent = "Back to the short version";
   }
+
+  // ---------- Google fonts ----------
+  // The list (assets/google-fonts.json, made by tools/google-fonts/update.mjs) is fetched the
+  // first time it's needed. A chosen font is loaded from Google Fonts, like this page's own
+  // fonts, so it shows here; Gmail doesn't load it, and the Text tab says so.
+  let fontList = null, fontListLoad = null;
+  function getFontList() {
+    if (!fontListLoad) {
+      fontListLoad = fetch("assets/google-fonts.json")
+        .then((r) => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+        .then((d) => (fontList = d.fonts.map(([name, kind, reg, bold]) => ({ name: name, kind: d.kinds[kind], reg: reg, bold: bold }))))
+        .catch(() => { fontListLoad = null; return null; });
+    }
+    return fontListLoad;
+  }
+  const findFont = (name) => fontList && fontList.find((f) => f.name.toLowerCase() === String(name || "").trim().toLowerCase());
+  const family = (f, bold) => "family=" + f.name.replace(/ /g, "+") + ":wght@" + (bold && f.bold ? f.reg + ";" + f.bold : f.reg);
+  function addCss(query) {
+    return new Promise((done) => {
+      const l = document.createElement("link");
+      l.rel = "stylesheet";
+      l.href = "https://fonts.googleapis.com/css2?" + query + "&display=swap";
+      l.onload = l.onerror = done;
+      document.head.appendChild(l);
+    });
+  }
+  // A font for the signature, regular and bold. Text is measured to fit the card, so the
+  // signature is drawn again once the font has arrived, unless someone is typing in it.
+  const fontsUsed = new Set();
+  function useFont(name) {
+    if (fontsUsed.has(name)) return;
+    fontsUsed.add(name);
+    getFontList().then(() => {
+      const f = findFont(name);
+      if (!f) { fontsUsed.delete(name); return; }
+      addCss(family(f, true)).then(() => document.fonts.load(f.reg + ' 16px "' + f.name + '"')).then(() => {
+        if (!sig.contains(document.activeElement)) renderAll(true);
+        if (!sheet.hidden && tab === "layout") drawLayouts();
+      });
+    });
+  }
+  // The search results show each name in its own font, loading only the letters of the names.
+  const previewed = new Set();
+  function previewFonts(list) {
+    const todo = list.filter((f) => !previewed.has(f.name) && !fontsUsed.has(f.name));
+    if (!todo.length) return;
+    todo.forEach((f) => previewed.add(f.name));
+    const letters = Array.from(new Set(todo.map((f) => f.name).join(""))).join("");
+    addCss(todo.map((f) => family(f, false)).join("&") + "&text=" + encodeURIComponent(letters));
+  }
+  function searchFonts(q) {
+    q = q.trim().toLowerCase();
+    if (!fontList) return [];
+    if (!q) return fontList.slice(0, 6);
+    const flat = q.replace(/\s+/g, ""), starts = [], has = [];
+    for (const f of fontList) {
+      const n = f.name.toLowerCase();
+      if (n.startsWith(q) || n.replace(/\s+/g, "").startsWith(flat)) starts.push(f);
+      else if (n.includes(q)) has.push(f);
+      if (starts.length >= 6) break;
+    }
+    return starts.concat(has).slice(0, 6);
+  }
+  function fontNote(web, problem) {
+    if (problem) return problem;
+    if (!web) return "Choose any font from Google Fonts. Gmail doesn't send fonts with your signature, so people only see it if it's installed on their device.";
+    return "You see " + S.esc(web) + " here because this page loads it. Gmail doesn't, so only people who have " + S.esc(web) +
+      " installed see it. Everyone else sees the fallback below.";
+  }
+  // Choosing a font also picks a fallback of the same kind: Georgia for a serif, Helvetica otherwise.
+  function chooseFont(f) {
+    st.fontSource = "google";
+    st.webFont = f.name;
+    const serif = f.kind === "Serif", fallbackSerif = st.font === "georgia" || st.font === "palatino";
+    if (serif !== fallbackSerif) st.font = serif ? "georgia" : "helvetica";
+    save(); renderAll();
+  }
+  // A combo box: typing or the down arrow lists matches, the arrows move through them, Enter or
+  // a click chooses one, Escape closes the list.
+  function fontSearch(input, list) {
+    let results = [], active = -1;
+    const note = (problem) => { $("gfontNote").innerHTML = fontNote(S.webFont(st), problem); $("gfontNote").classList.toggle("bad", !!problem); };
+    const mark = () => {
+      list.querySelectorAll("[role=option]").forEach((o) => o.setAttribute("aria-selected", String(+o.dataset.k === active)));
+      input.setAttribute("aria-activedescendant", active >= 0 ? "gfo" + active : "");
+      const o = $("gfo" + active);
+      if (o) o.scrollIntoView({ block: "nearest" });
+    };
+    const close = () => { list.hidden = true; input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant"); };
+    const open = () => getFontList().then((all) => {
+      if (document.activeElement !== input) return;
+      if (!all) { note("The list of Google fonts didn't load. Check your connection, then try again."); return; }
+      results = searchFonts(input.value);
+      active = results.length ? 0 : -1;
+      const fallback = (S.FONTS[st.font] || S.FONTS.helvetica).stack;
+      list.innerHTML = results.length ? results.map((f, k) =>
+        '<div role="option" id="gfo' + k + '" data-k="' + k + '" aria-selected="false"><span class="gname" style="font-family:\'' + f.name + "'," + fallback + '">' + S.esc(f.name) +
+        '</span><span class="gkind">' + f.kind + "</span></div>").join("")
+        : '<p class="gnone">No Google font is called that. Try another name.</p>';
+      list.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+      mark();
+      previewFonts(results);
+    });
+    const choose = (f) => { close(); input.value = f.name; if (f.name !== st.webFont) chooseFont(f); };
+    input.addEventListener("input", open);
+    input.addEventListener("click", () => { if (list.hidden) open(); });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        if (list.hidden) { open(); return; }
+        if (results.length) active = (active + (e.key === "ArrowDown" ? 1 : -1) + results.length) % results.length;
+        mark();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const f = !list.hidden && results[active] ? results[active] : findFont(input.value);
+        if (f) choose(f);
+        else if (input.value.trim()) note("Google Fonts has no font called “" + S.esc(input.value.trim()) + "”. Choose one from the list.");
+      } else if (e.key === "Escape" && !list.hidden) {
+        e.stopPropagation();
+        close();
+      }
+    });
+    // Choosing with the mouse happens before the field loses focus.
+    list.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      const o = e.target.closest("[data-k]");
+      if (o) choose(results[+o.dataset.k]);
+    });
+    input.addEventListener("blur", () => {
+      if (!input.isConnected) return; // the panel was drawn again after a choice
+      close();
+      const f = findFont(input.value);
+      if (f && f.name !== st.webFont) chooseFont(f);
+      else if (!f && input.value.trim() && input.value.trim() !== st.webFont) {
+        note("Google Fonts has no font called “" + S.esc(input.value.trim()) + "”. Choose one from the list.");
+        input.value = st.webFont || "";
+      }
+    });
+  }
+
+  // ---------- email preview ----------
+  document.querySelectorAll("[data-which]").forEach((b) => b.addEventListener("click", () => { which = b.dataset.which; renderAll(); }));
 
   // ---------- copying ----------
   // The copy button copies the signature being edited. A card above the toolbar then says where

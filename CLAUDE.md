@@ -6,7 +6,8 @@ A static site with no build step. The **Website** workflow (`.github/workflows/w
 - `signature.js`: the signature's details and the renderer for the copied HTML, the email preview and the editable card
 - `app.js`: editing, the hover bar, the pop-ups, the Design panel and copying
 - `icons/v1/`: the icons copied signatures link to; `tools/icons/` draws them
-- `assets/`: favicon, example photo, the README's example signature picture, the share picture (`social-preview.png`)
+- `assets/`: favicon, example photo, the README's example signature picture, the share picture (`social-preview.png`), the list of Google fonts (`google-fonts.json`)
+- `tools/google-fonts/update.mjs`: makes `assets/google-fonts.json` from Google Fonts' own list; run it to pick up new fonts
 - `tools/social-card/`: the share picture's source (`card.html`) and `render.js`, which renders it to `assets/social-preview.png` and, for the repository's social preview on GitHub (uploaded by hand in Settings), to `github-social-preview.png`. After changing it, bump the `?v=` on `og:image` in `index.html` so sites fetch the new picture.
 
 ## Commits and pull requests
@@ -42,7 +43,7 @@ Commits go out under the maintainer's name and are public, so they get quoted ou
 
 ## The page
 
-- **The signature it copies** is tables and inline styles, in one of the fonts in `FONTS` in `signature.js`, because Gmail removes stylesheets, web fonts, SVG and `data:` images from signatures. A font added there must come with Windows, macOS and iOS, and its list must end in a generic family (`sans-serif` or `serif`). Images in it (the photo, icons) are hosted PNG or JPEG files. Keep it under Gmail's 10,000-character limit.
+- **The signature it copies** is tables and inline styles, in one of the fonts in `FONTS` in `signature.js`, because Gmail removes stylesheets, web fonts, SVG and `data:` images from signatures. A font added there must come with Windows, macOS and iOS, and its list must end in a generic family (`sans-serif` or `serif`). A Google font the person chooses (`fontSource` and `webFont`) goes before one of them, never alone: it only shows for readers who have it installed, everyone else sees the fallback, and the Text tab says so. Images in it (the photo, icons) are hosted PNG or JPEG files. Keep it under Gmail's 10,000-character limit.
 - **Never change, move or delete a file in `icons/v1/`.** Signatures pasted into people's mail keep loading those exact addresses. New icons are new files; new artwork for an existing icon goes into `icons/v2/`. See `icons/README.md`. `.github/scripts/check-icons.mjs` checks this on every pull request and before every deploy, and the site isn't published while it fails.
 - **One renderer.** The copied HTML, the email preview and the editable card all come from `render()` in `signature.js`, so a change to how the signature looks is made there once.
 - **Two signatures.** The stored object is the signature for new emails, and `reply` inside it is the one for replies. Both are complete signatures that `render()` draws the same way. They share the details in `DETAILS` and each item's text, matched by id (`syncDetails()`); each keeps its own items, their order, the extras it shows and its design. Until someone changes the reply signature (`custom`), it's made again from the other one after every change (`replyFrom()`).
