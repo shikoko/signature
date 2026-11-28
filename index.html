@@ -46,7 +46,8 @@
     <div class="glow" aria-hidden="true"></div>
     <div class="work" id="work">
       <div class="card-bar">
-        <span class="hint">Click any part of the signature to edit it.</span>
+        <div class="dseg which" id="whichSeg" role="radiogroup" aria-label="Signature you're editing"><button type="button" role="radio" data-which="full">New emails</button><button type="button" role="radio" data-which="reply">Replies</button></div>
+        <p class="hint"><span id="cardHint">Click any part of the signature to edit it.</span> <button type="button" class="restart" id="restart" title="Make it the short version again, which follows your signature for new emails" hidden>Back to the short version</button></p>
         <button type="button" class="add" id="addBtn" aria-haspopup="dialog" title="Add a phone number, a profile, an app link and more"><svg class="i" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>Add</button>
       </div>
       <div class="card" id="card">
@@ -60,7 +61,7 @@
       <div class="also-mail">
         <div class="mail-bar">
           <span>To: ana@example.com</span>
-          <div class="lseg" role="radiogroup" aria-label="Which signature"><button type="button" role="radio" data-which="full">New email</button><button type="button" role="radio" data-which="reply">Reply</button></div>
+          <span class="mail-kind" id="mailKind">New email</span>
         </div>
         <div class="mail-body" id="alsoBody"></div>
       </div>
@@ -75,9 +76,9 @@
       <p class="path">Settings <i>→</i> See all settings <i>→</i> Signature <i>→</i> Create new</p>
       <a class="gm" href="https://mail.google.com/mail/u/0/#settings/general" target="_blank" rel="noopener">Open Gmail settings<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3H3.5v9.5H13V10M9 3h4v4M13 3L7.5 8.5"/></svg></a>
       <div class="short">
-        <span class="mini" id="shortPic" aria-hidden="true"></span>
-        <div class="txt"><strong>Want a shorter one for replies?</strong><span>Add it as a second signature, then choose it under “On reply/forward use”.</span></div>
-        <button type="button" class="gbtn" id="copyReply">Copy short version</button>
+        <span class="mini" id="otherPic" aria-hidden="true"></span>
+        <div class="txt"><strong id="otherTitle">Want a different one for replies?</strong><span id="otherText">Add it as a second signature, then choose it under “On reply/forward use”.</span></div>
+        <button type="button" class="gbtn" id="copyOther">Copy for replies</button>
       </div>
     </div>
     <div class="dock-note" id="dockNote" role="status" hidden><span><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.8 15 14H1L8 1.8Z"/><path d="M8 6.5v3.2M8 11.8v.1"/></svg><span id="dockNoteText"></span></span><button type="button" class="fix" id="dockFix"></button></div>
@@ -90,9 +91,9 @@
   <span class="sr-only" id="announce" aria-live="polite"></span>
 
   <section class="steps" aria-label="Paste it into Gmail">
-    <div class="step" style="--c: var(--l1)"><b>1</b><strong>Copy</strong><span>Click Copy signature. Once it's copied, you can also copy a shorter one for replies, with just your name, title and links.</span></div>
-    <div class="step" style="--c: var(--l2)"><b>2</b><strong>Paste</strong><span>Gmail → Settings → See all settings → Signature → Create new, then paste. Do the same for the short one.</span></div>
-    <div class="step" style="--c: var(--l4)"><b>3</b><strong>Choose and save</strong><span>Under Signature defaults, choose yours for new emails, and the short one for replies if you made it, then Save Changes.</span></div>
+    <div class="step" style="--c: var(--l1)"><b>1</b><strong>Copy</strong><span>Click Copy signature. Then copy the one for replies too: a short version to start with, which you can change under Replies, above your signature.</span></div>
+    <div class="step" style="--c: var(--l2)"><b>2</b><strong>Paste</strong><span>Gmail → Settings → See all settings → Signature → Create new, then paste. Do the same for the one for replies.</span></div>
+    <div class="step" style="--c: var(--l4)"><b>3</b><strong>Choose and save</strong><span>Under Signature defaults, choose yours for new emails, and the one for replies if you made it, then Save Changes.</span></div>
   </section>
   <footer>Made by <a href="https://shikoko.github.io/">Bogdan Roatis</a> · <a href="https://github.com/shikoko/signature">Source</a> · Your details stay in this browser.</footer>
 

@@ -13,11 +13,15 @@
     }
     localStorage.removeItem("gmail-signature-builder.v2");
   } catch (e) { /* storage refused: start from the example */ }
-  const st = S.load(KEY);
+  // Two signatures: `store` is the one for new emails, and holds the one for replies as
+  // store.reply. `st` is whichever is being edited; everything on the page works on it.
+  const store = S.load(KEY);
+  let which = "full", st = store;
+  const sigOf = (w) => w === "reply" ? store.reply : store;
+  const otherOf = (w) => w === "reply" ? "full" : "reply";
   const failed = new Set(); // photo links that didn't load here
   const page = $("page"), sig = $("sig"), pop = $("pop"), bar = $("hoverbar"), sheet = $("sheet"), grip = $("grip");
   const stage = document.querySelector(".stage");
-  let which = "full";
   let barFor = null; // the line or link the hover bar is showing for
 
   const svg = (d) => '<svg class="i" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>';
@@ -38,7 +42,20 @@
   // In the page's dark menus, black and dark-grey icons use their white version so they show.
   const DARK_ICONS = new Set(["github", "x", "medium", "googleplay", "phone", "email", "website", "address", "booking", "custom"]);
   const uiIcon = (type) => S.iconPath(DARK_ICONS.has(type) ? "white" : "brand", type);
-  const save = () => { st.edited = true; S.save(KEY, st); };
+  // `details` marks a change to what both signatures share: text, link addresses and the photo.
+  // Any other change to the reply signature makes it the person's own (custom), so it keeps its
+  // own lines and design instead of being made again from the one for new emails.
+  const save = (details) => {
+    store.edited = true;
+    if (st === store.reply) {
+      S.syncDetails(st, store);
+      if (!details) st.custom = true;
+    } else if (store.reply.custom) S.syncDetails(store, store.reply);
+    else store.reply = S.replyFrom(store);
+    S.save(KEY, store);
+  };
+  // Whether the other signature shows an extra, so taking it out of this one keeps its text.
+  const otherShows = (k) => st === store ? store.reply.custom && store.reply.show[k] : store.show[k];
   const item = (id) => st.items.find((i) => i.id === id);
   const groupOf = (i) => S.TYPES[i.type].group;
   const env = { failed: failed };
@@ -68,7 +85,7 @@
     bar.hidden = true;
     grip.hidden = true;
     barFor = null;
-    const html = S.render(st, "edit", "full", env);
+    const html = S.render(st, "edit", env);
     sig.innerHTML = scaled(html, scale);
     // A wide layout that doesn't fit at this size is shown smaller, never below real size,
     // so the whole signature stays in view.
@@ -84,12 +101,25 @@
     $("addBtn").setAttribute("aria-expanded", !pop.hidden && pop.dataset.for === "add");
     $("alsoPreview").hidden = !alsoShown();
     if (alsoShown()) showEmail($("alsoBody"));
-    document.querySelectorAll("[data-which]").forEach((b) => b.setAttribute("aria-checked", b.dataset.which === which));
+    document.querySelectorAll("[data-which]").forEach((b) => {
+      b.setAttribute("aria-checked", b.dataset.which === which);
+      b.tabIndex = b.dataset.which === which ? 0 : -1;
+    });
+    showWhich();
     if (!sheet.hidden && !keepPanel) buildSheet();
     meta();
   }
+  // What the page says about the signature being edited: the line above the card, the email
+  // preview's kind and the copy button.
+  function showWhich() {
+    const reply = which === "reply";
+    $("cardHint").textContent = reply ? "Shown in replies. Your name and details are the same in both." : "Click any part of the signature to edit it.";
+    $("restart").hidden = !(reply && st.custom);
+    $("mailKind").textContent = reply ? "Reply" : "New email";
+    $("copyFull").textContent = reply ? "Copy reply signature" : "Copy signature";
+  }
   function showEmail(body) {
-    const html = S.render(st, "preview", which, env);
+    const html = S.render(st, "preview", env);
     body.innerHTML = which === "reply"
       ? "<p>Sounds good. The crash fix goes out in Monday's build.</p>" + html +
         '<div class="quote">On Thu, Nov 26, 2026 at 6:04 PM Ana wrote:<br>Can we get the crash fix in before the release?</div>'
@@ -100,7 +130,9 @@
   // The email preview shows while the Design panel is open, so each change can be seen at real
   // size. The rest of the time the page shows only the signature being edited.
   const alsoShown = () => !sheet.hidden;
-  const localOnly = () => !st.photo && !!st.localPhoto && st.showPhoto;
+  // The compact layout has no photo, so a photo only matters to a signature in another layout.
+  const photoShows = (s) => s.showPhoto && s.layout !== "compact";
+  const localOnly = (s) => !s.photo && !!s.localPhoto && photoShows(s);
   function say(text, bad) {
     const status = $("status");
     status.textContent = text;
@@ -111,8 +143,8 @@
   // Problems that change what gets copied show just above the toolbar, with a dot on
   // "Copy signature" and a button that fixes them.
   function copyWarning() {
-    if (localOnly()) return { text: "Your photo won't be in the copy: it's only on this computer.", fix: "Add a link" };
-    if (st.photo && st.showPhoto && failed.has(S.cleanUrl(st.photo))) {
+    if (localOnly(st)) return { text: "Your photo won't be in the copy: it's only on this computer.", fix: "Add a link" };
+    if (st.photo && photoShows(st) && failed.has(S.cleanUrl(st.photo))) {
       return { text: "Your photo link didn't load here, so it may not show in Gmail either.", fix: "Change the link" };
     }
     return null;
@@ -130,7 +162,7 @@
     document.documentElement.style.setProperty("--note-space", w ? note.offsetHeight + 8 + "px" : "0px");
   }
   function meta() {
-    const ex = S.examplesInUse(st), r = S.contrast(st.accent), size = S.render(st, "export", "full").length;
+    const ex = S.examplesInUse(st), r = S.contrast(st.accent), size = S.render(st, "export").length;
     const parts = [];
     if (ex) parts.push('<span>Example details: <button type="button" id="clear">clear them</button></span>');
     parts.push('<span class="' + (r < 4.5 ? "bad" : "") + '">' + r.toFixed(1) + ":1 contrast" + (r < 4.5 ? ", too light" : "") + "</span>");
@@ -139,7 +171,7 @@
     dockNote();
     const clear = $("clear");
     if (clear) clear.addEventListener("click", () => {
-      S.clearExamples(st); save(); renderAll();
+      S.clearExamples(store); S.clearExamples(store.reply); save(true); renderAll();
       const n = sig.querySelector('[data-key="name"]');
       if (n) n.focus();
     });
@@ -154,7 +186,7 @@
     if (el.dataset.key) st[el.dataset.key] = text;
     else if (el.dataset.itemValue) item(el.dataset.itemValue).value = text;
     else if (el.dataset.itemLabel) item(el.dataset.itemLabel).label = text;
-    save();
+    save(true);
     if (alsoShown()) showEmail($("alsoBody"));
     meta();
   });
@@ -176,10 +208,12 @@
     setTimeout(() => { if (!sig.contains(document.activeElement)) tidy(); }, 0);
   });
   function tidy() {
-    const before = JSON.stringify(st);
-    st.items = st.items.filter((i) => groupOf(i) !== "contact" || (i.value || "").trim());
-    Object.keys(S.OPTIONAL).forEach((k) => { if (!(st[k] || "").trim()) { st.show[k] = false; st[k] = ""; } });
-    if (JSON.stringify(st) !== before) { save(); renderAll(); }
+    const before = JSON.stringify(store);
+    [store, store.reply].forEach((s) => {
+      s.items = s.items.filter((i) => groupOf(i) !== "contact" || (i.value || "").trim());
+      Object.keys(S.OPTIONAL).forEach((k) => { if (!(s[k] || "").trim()) { s.show[k] = false; s[k] = ""; } });
+    });
+    if (JSON.stringify(store) !== before) { save(true); renderAll(); }
   }
   sig.addEventListener("click", (e) => {
     const l = e.target.closest(".lnk");
@@ -257,8 +291,9 @@
   $("hbNext").addEventListener("click", () => { if (barFor && barFor.dataset.item) move(barFor.dataset.item, 1); });
   $("hbRemove").addEventListener("click", () => {
     if (!barFor) return;
+    const k = barFor.dataset.opt;
     if (barFor.dataset.item) st.items = st.items.filter((i) => i.id !== barFor.dataset.item);
-    else { st.show[barFor.dataset.opt] = false; st[barFor.dataset.opt] = ""; }
+    else { st.show[k] = false; if (!otherShows(k)) st[k] = ""; }
     save(); hideBar(true); renderAll();
   });
 
@@ -339,7 +374,7 @@
     pop.classList.remove("wide");
     pop.dataset.for = "";
     const i = id && item(id);
-    if (i && groupOf(i) === "links" && !(i.value || "").trim()) { st.items = st.items.filter((x) => x !== i); save(); }
+    if (i && groupOf(i) === "links" && !(i.value || "").trim()) { st.items = st.items.filter((x) => x !== i); save(true); }
     renderAll();
   }
   document.addEventListener("mousedown", (e) => {
@@ -370,8 +405,8 @@
       '<span><button type="button" class="link rm" id="prm">Remove</button><button type="button" class="done" id="pd">Done</button></span></div>';
     $("pv").value = i.value || "";
     $("pt").value = i.text || "";
-    $("pv").addEventListener("input", (e) => { i.value = e.target.value; save(); meta(); });
-    $("pt").addEventListener("input", (e) => { i.text = e.target.value; save(); renderSig(); meta(); });
+    $("pv").addEventListener("input", (e) => { i.value = e.target.value; save(true); meta(); });
+    $("pt").addEventListener("input", (e) => { i.text = e.target.value; save(true); renderSig(); meta(); });
     [$("pv"), $("pt")].forEach((x) => x.addEventListener("keydown", (e) => { if (e.key === "Enter") closePop(); }));
     $("pd").addEventListener("click", closePop);
     $("prm").addEventListener("click", () => {
@@ -408,13 +443,13 @@
       '<input type="file" id="pfileInput" accept="image/*" hidden>' +
       '<p class="note" id="pnote"></p>' +
       '<div class="row"><span></span><span><button type="button" class="link rm" id="prm">Remove</button><button type="button" class="done" id="pd">Done</button></span></div>';
-    const note = () => { $("pnote").textContent = localOnly() ? PHOTO_NOTE.local : PHOTO_NOTE.link; };
+    const note = () => { $("pnote").textContent = localOnly(st) ? PHOTO_NOTE.local : PHOTO_NOTE.link; };
     note();
     $("pp").value = st.photo || "";
     $("pp").addEventListener("input", (e) => {
       st.photo = e.target.value.trim();
       if (st.photo) st.localPhoto = "";
-      save(); note(); meta();
+      save(true); note(); meta();
     });
     $("pp").addEventListener("keydown", (e) => { if (e.key === "Enter") closePop(); });
     $("pfile").addEventListener("click", () => $("pfileInput").click());
@@ -425,9 +460,9 @@
       st.photo = "https://github.com/" + gh + ".png?size=200";
       st.localPhoto = "";
       $("pp").value = st.photo;
-      save(); note(); meta();
+      save(true); note(); meta();
     });
-    $("prm").addEventListener("click", () => { st.photo = ""; st.localPhoto = ""; save(); closePop(); });
+    $("prm").addEventListener("click", () => { st.photo = ""; st.localPhoto = ""; save(true); closePop(); });
     $("pd").addEventListener("click", closePop);
     placePop(anchor);
     $("pp").focus();
@@ -479,17 +514,34 @@
     ["Profiles", ["github", "linkedin", "x", "bluesky", "mastodon", "instagram", "youtube", "dribbble", "medium", "stackoverflow"]],
     ["Apps and links", ["appstore", "googleplay", "booking", "custom"]]
   ];
+  // Lines the other signature has and this one doesn't, to bring across with what's typed in them.
+  // While the reply signature still follows the one for new emails, it has nothing of its own.
+  function fromOther() {
+    const o = st === store ? (store.reply.custom ? store.reply : null) : store;
+    return o ? o.items.filter((i) => !st.items.some((x) => x.id === i.id) && ((i.value || "").trim() || groupOf(i) === "links")) : [];
+  }
   function openAdd(anchor) {
-    const extras = Object.keys(S.OPTIONAL).filter((k) => !S.shown(st, k));
+    // The compact layout has no tagline.
+    const extras = Object.keys(S.OPTIONAL).filter((k) => !S.shown(st, k) && !(k === "tagline" && st.layout === "compact"));
+    const across = fromOther();
+    const name = (i) => groupOf(i) === "links" ? i.text || S.TYPES[i.type].label : i.value.trim();
     hideBar(true);
     pop.dataset.for = "add";
     pop.classList.add("wide");
-    pop.innerHTML = "<h3>Add to your signature</h3>" + ADD_GROUPS.map(([g, types]) =>
+    pop.innerHTML = "<h3>Add to your signature</h3>" +
+      (across.length ? '<div class="grp">' + (st === store ? "From your reply signature" : "From your signature for new emails") + '</div><div class="opts">' + across.map((i) =>
+        '<button type="button" data-bring="' + i.id + '" title="' + S.esc(name(i)) + '"><img src="' + uiIcon(i.type) + '" alt=""><span class="bring">' + S.esc(name(i)) + "</span></button>").join("") + "</div>" : "") +
+      ADD_GROUPS.map(([g, types]) =>
       '<div class="grp">' + g + '</div><div class="opts">' + types.map((t) =>
         '<button type="button" data-add="' + t + '"><img src="' + uiIcon(t) + '" alt="">' + S.esc(S.TYPES[t].label) + "</button>").join("") + "</div>").join("") +
       (extras.length ? '<div class="grp">Extras</div><div class="opts">' + extras.map((k) =>
         '<button type="button" data-opt-add="' + k + '"><span class="dot"></span>' + S.OPTIONAL[k] + "</button>").join("") + "</div>" : "");
     pop.querySelectorAll("[data-add]").forEach((b) => b.addEventListener("click", () => addItem(b.dataset.add)));
+    pop.querySelectorAll("[data-bring]").forEach((b) => b.addEventListener("click", () => {
+      const it = Object.assign({}, across.find((i) => i.id === b.dataset.bring)), g = groupOf(it);
+      st.items.splice(st.items.map(groupOf).lastIndexOf(g) + 1, 0, it);
+      save(); pop.hidden = true; pop.dataset.for = ""; renderAll();
+    }));
     pop.querySelectorAll("[data-opt-add]").forEach((b) => b.addEventListener("click", () => {
       st.show[b.dataset.optAdd] = true;
       save(); pop.hidden = true; pop.dataset.for = ""; renderAll();
@@ -589,7 +641,7 @@
   // each picture keeps their colour, icons, font, labels and photo.
   function drawLayouts() {
     sheet.querySelectorAll('[data-set="layout"]').forEach((b) =>
-      picture(b.querySelector(".thumb"), S.render(Object.assign({}, st, { layout: b.dataset.val }), "preview", "full", env), 0.6));
+      picture(b.querySelector(".thumb"), S.render(Object.assign({}, st, { layout: b.dataset.val }), "preview", env), 0.6));
   }
   function buildSheet() {
     // Rebuilding would lose the panel's scroll position and the focused button, so keep both.
@@ -597,7 +649,7 @@
     const refocus = f && (f.dataset.set ? '[data-set="' + f.dataset.set + '"][data-val="' + f.dataset.val + '"]'
       : f.dataset.ord != null ? '[data-ord="' + f.dataset.ord + '"][data-dir="' + f.dataset.dir + '"]'
       : f.dataset.tab ? '[data-tab="' + f.dataset.tab + '"]' : f.id ? "#" + f.id : null);
-    sheet.innerHTML = '<div class="sheet-head"><h3>Design</h3><button type="button" class="done" id="sheetDone">Done</button></div>' +
+    sheet.innerHTML = '<div class="sheet-head"><h3>Design' + (which === "reply" ? ' <span class="for">for replies</span>' : "") + '</h3><button type="button" class="done" id="sheetDone">Done</button></div>' +
       '<div class="dtabs" role="tablist" aria-label="Design">' + TABS.map(([k, l]) =>
         '<button type="button" role="tab" id="tab-' + k + '" data-tab="' + k + '" aria-selected="' + (tab === k) + '" aria-controls="tabPage" tabindex="' + (tab === k ? 0 : -1) + '">' + l + "</button>").join("") + "</div>" +
       '<div class="tab-page" id="tabPage" role="tabpanel" aria-labelledby="tab-' + tab + '">' + PAGES[tab]() + "</div>";
@@ -658,63 +710,117 @@
   }
   $("designBtn").addEventListener("click", () => toggleSheet(sheet.hidden));
 
-  // ---------- email preview ----------
-  document.querySelectorAll("[data-which]").forEach((b) => b.addEventListener("click", () => { which = b.dataset.which; renderAll(); }));
+  // ---------- which signature ----------
+  // The switch above the card picks the signature being edited: the one for new emails or the
+  // one for replies. The Design panel, the email preview and Copy all follow it.
+  function setWhich(w) {
+    if (w === which) return;
+    closePop();
+    closeCopied(false);
+    hideBar(true);
+    which = w;
+    st = sigOf(w);
+    renderAll();
+  }
+  document.querySelectorAll("[data-which]").forEach((b) => b.addEventListener("click", () => setWhich(b.dataset.which)));
+  $("whichSeg").addEventListener("keydown", (e) => {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+    e.preventDefault();
+    setWhich(otherOf(which));
+    document.querySelector('#whichSeg [data-which="' + which + '"]').focus();
+  });
+  // Once the reply signature is the person's own, this makes it the short version again, which
+  // follows the one for new emails. It asks once more before throwing the changes away.
+  $("restart").addEventListener("click", () => {
+    const b = $("restart");
+    clearTimeout(b._t);
+    if (!b.classList.contains("sure")) {
+      b.classList.add("sure");
+      b.textContent = "Yes, go back";
+      b._t = setTimeout(resetRestart, 4000);
+      return;
+    }
+    resetRestart();
+    store.reply = S.replyFrom(store);
+    st = store.reply;
+    S.save(KEY, store);
+    renderAll();
+    say("Your reply signature is the short version again.");
+  });
+  function resetRestart() {
+    const b = $("restart");
+    clearTimeout(b._t);
+    b.classList.remove("sure");
+    b.textContent = "Back to the short version";
+  }
 
   // ---------- copying ----------
-  // "Copy signature" copies the full signature. A card above the toolbar then says where to paste
-  // it in Gmail and offers the shorter one for replies, which Gmail can keep as a second signature.
+  // The copy button copies the signature being edited. A card above the toolbar then says where
+  // to paste it in Gmail and offers the other one, which Gmail can keep as a second signature.
   const copied = $("copied");
   const TICK = '<svg class="i" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg>';
+  const OTHER = {
+    reply: { title: "Want a different one for replies?", text: "Add it as a second signature, then choose it under “On reply/forward use”.", button: "Copy for replies",
+      done: "Signature for replies copied. Add it as a second signature in Gmail." },
+    full: { title: "And the one for new emails?", text: "Add it as another signature, then choose it under “For new emails use”.", button: "Copy for new emails",
+      done: "Signature for new emails copied. Add it as another signature in Gmail." }
+  };
+  let copiedWhich = "full";
   // Screen readers hear what the card shows; the page's status line is kept for problems.
   function announce(text) {
     const a = $("announce");
     a.textContent = "";
     setTimeout(() => { a.textContent = text; }, 50);
   }
-  // Copies one version and returns notes about what's in it, or null if the browser refused.
-  async function doCopy(variant) {
+  // Copies one signature and returns notes about what's in it, or null if the browser refused.
+  async function doCopy(w) {
     tidy();
-    if (!(await S.copy(st, variant))) {
+    const s = sigOf(w);
+    if (!(await S.copy(s))) {
       closeCopied(false);
       say("Your browser blocked copying. Try Chrome, Edge or Firefox.", true);
       return null;
     }
     const notes = [];
-    if (variant === "full" && localOnly()) notes.push("Your photo isn't in it: it needs a link.");
-    if (S.examplesInUse(st)) notes.push("It still has example details.");
+    if (localOnly(s)) notes.push("Your photo isn't in it: it needs a link.");
+    if (S.examplesInUse(s)) notes.push("It still has example details.");
     $("copiedNote").textContent = notes.join(" ");
     $("copiedNote").hidden = !notes.length;
     return notes;
   }
-  function resetShort() {
-    const b = $("copyReply");
+  function resetOther() {
+    const b = $("copyOther");
     clearTimeout(b._t);
     b.classList.remove("done");
-    b.textContent = "Copy short version";
+    b.textContent = OTHER[otherOf(copiedWhich)].button;
   }
   function closeCopied(focusCopy) {
     if (copied.hidden) return;
     copied.hidden = true;
-    resetShort();
+    resetOther();
     if (focusCopy) $("copyFull").focus();
   }
   $("copyFull").addEventListener("click", async () => {
-    const notes = await doCopy("full");
+    const w = which, notes = await doCopy(w);
     if (!notes) return;
-    resetShort();
+    copiedWhich = w;
+    const o = OTHER[otherOf(w)];
+    $("otherTitle").textContent = o.title;
+    $("otherText").textContent = o.text;
+    resetOther();
     copied.hidden = false;
-    picture($("shortPic"), S.render(st, "preview", "reply", env), 0.6);
-    announce("Signature copied. " + (notes.length ? notes.join(" ") + " " : "") + "Paste it into Gmail: Settings, See all settings, Signature, Create new.");
+    picture($("otherPic"), S.render(sigOf(otherOf(w)), "preview", env), 0.6);
+    announce((w === "reply" ? "Reply signature copied. " : "Signature copied. ") + (notes.length ? notes.join(" ") + " " : "") +
+      "Paste it into Gmail: Settings, See all settings, Signature, Create new.");
   });
-  $("copyReply").addEventListener("click", async () => {
-    const notes = await doCopy("reply"), b = $("copyReply");
+  $("copyOther").addEventListener("click", async () => {
+    const w = otherOf(copiedWhich), notes = await doCopy(w), b = $("copyOther");
     if (!notes) return;
     b.classList.add("done");
     b.innerHTML = TICK + "Copied";
     clearTimeout(b._t);
-    b._t = setTimeout(resetShort, 2500);
-    announce("Short version copied. " + (notes.length ? notes.join(" ") + " " : "") + "Add it as a second signature in Gmail.");
+    b._t = setTimeout(resetOther, 2500);
+    announce(OTHER[w].done + (notes.length ? " " + notes.join(" ") : ""));
   });
   $("copiedClose").addEventListener("click", () => closeCopied(true));
   document.addEventListener("mousedown", (e) => {
